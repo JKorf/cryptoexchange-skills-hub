@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kucoin.Net"
+  short_description: "Build C# Kucoin integrations with Kucoin.Net."
+  default_prompt: "Use Kucoin.Net to implement a C# Kucoin REST or websocket workflow."

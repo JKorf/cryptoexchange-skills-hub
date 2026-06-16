@@ -1,0 +1,4 @@
+interface:
+  display_name: "CryptoExchange Library"
+  short_description: "Create or update CryptoExchange.Net-based exchange libraries."
+  default_prompt: "Use CryptoExchange.Net conventions to implement or update an exchange client library."
