@@ -1,0 +1,4 @@
+interface:
+  display_name: "Polymarket.Net"
+  short_description: "Build C# Polymarket CLOB and market integrations."
+  default_prompt: "Use $polymarket-net to implement a Polymarket.Net CLOB, metadata, websocket, or trading workflow."

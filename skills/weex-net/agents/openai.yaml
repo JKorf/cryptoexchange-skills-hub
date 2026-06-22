@@ -1,0 +1,4 @@
+interface:
+  display_name: "Weex.Net"
+  short_description: "Build C# Weex spot and futures integrations."
+  default_prompt: "Use $weex-net to implement a Weex.Net REST, websocket, account, or trading workflow."

@@ -1,4 +1,4 @@
 interface:
   display_name: "Binance.Net"
   short_description: "Build C# Binance integrations with Binance.Net."
-  default_prompt: "Use Binance.Net to implement a C# Binance REST or websocket workflow."
+  default_prompt: "Use $binance-net to implement a Binance.Net REST or websocket workflow."

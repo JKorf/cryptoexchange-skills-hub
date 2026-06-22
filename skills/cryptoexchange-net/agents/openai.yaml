@@ -1,4 +1,4 @@
 interface:
   display_name: "CryptoExchange.Net"
   short_description: "Build C# apps with CryptoExchange.Net shared exchange APIs."
-  default_prompt: "Use CryptoExchange.Net shared APIs to build a C# exchange integration."
+  default_prompt: "Use $cryptoexchange-net to build a C# integration with CryptoExchange.Net shared APIs."

@@ -4,7 +4,7 @@ Use these NuGet package IDs when generating install commands.
 
 | Repository | NuGet package |
 | --- | --- |
-| Aster.Net | `JKorf.Aster.Net` |
+| Aster.Net | `Jkorf.Aster.Net` |
 | Binance.Net | `Binance.Net` |
 | BingX.Net | `JK.BingX.Net` |
 | Bitfinex.Net | `Bitfinex.Net` |
@@ -27,7 +27,6 @@ Use these NuGet package IDs when generating install commands.
 | HyperLiquid.Net | `HyperLiquid.Net` |
 | Kraken.Net | `KrakenExchange.Net` |
 | Kucoin.Net | `Kucoin.Net` |
-| Lighter.Net | `Lighter.Net` |
 | Mexc.Net | `JK.Mexc.Net` |
 | OKX.Net | `JK.OKX.Net` |
 | Polymarket.Net | `Polymarket.Net` |

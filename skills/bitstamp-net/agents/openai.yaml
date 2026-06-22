@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bitstamp.Net"
+  short_description: "Build C# Bitstamp integrations with Bitstamp.Net."
+  default_prompt: "Use $bitstamp-net to implement a Bitstamp.Net REST or websocket workflow."

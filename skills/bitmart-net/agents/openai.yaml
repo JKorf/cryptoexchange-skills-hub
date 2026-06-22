@@ -1,0 +1,4 @@
+interface:
+  display_name: "BitMart.Net"
+  short_description: "Build C# BitMart integrations with BitMart.Net."
+  default_prompt: "Use $bitmart-net to implement a BitMart.Net REST or websocket workflow."

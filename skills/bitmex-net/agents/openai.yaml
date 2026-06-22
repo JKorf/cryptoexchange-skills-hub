@@ -1,0 +1,4 @@
+interface:
+  display_name: "BitMEX.Net"
+  short_description: "Build C# BitMEX integrations with BitMEX.Net."
+  default_prompt: "Use $bitmex-net to implement a BitMEX.Net REST or websocket workflow."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "CoinEx.Net"
+  short_description: "Build C# CoinEx spot and futures integrations with CoinEx.Net."
+  default_prompt: "Use $coinex-net to implement a CoinEx.Net spot, futures, REST, or websocket workflow."
