@@ -1,0 +1,4 @@
+interface:
+  display_name: "Lighter.Net"
+  short_description: "Build Lighter DEX .NET integrations"
+  default_prompt: "Use $lighter-net to build a Lighter.Net REST, websocket, SharedApis, order book, or trading workflow."
