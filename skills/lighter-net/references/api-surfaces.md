@@ -123,6 +123,7 @@ REST shared interfaces implemented by Lighter include:
 - `IOpenInterestRestClient`
 - `IFuturesOrderRestClient`
 - `IFuturesOrderClientIdRestClient`
+- `IFundingRateRestClient`
 
 Socket shared interfaces implemented by Lighter include:
 
@@ -137,4 +138,6 @@ Socket shared interfaces implemented by Lighter include:
 - `IUserTradeSocketClient`
 - `IPositionSocketClient`
 
-Confirm exact overloads from the local library source or `../Lighter.Net/Examples/` before generating non-trivial code.
+For multi-exchange code, call `client.ExchangeApi.SharedClient.Discover()` before routing optional shared features.
+
+Confirm exact overloads from the local library source or `../Lighter.Net/Examples/ai-friendly/` before generating non-trivial code.

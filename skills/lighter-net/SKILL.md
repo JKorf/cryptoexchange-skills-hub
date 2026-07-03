@@ -1,6 +1,6 @@
 ---
 name: lighter-net
-description: Build C#/.NET Lighter DEX integrations with JKorf.Lighter.Net, including ExchangeApi REST clients, websocket subscriptions and socket requests, account reads, order placement/cancellation, leverage and margin updates, LighterCredentials, Lighter spot and perpetual symbols, signer-backed transactions, local order books, trackers, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, and SharedApis access. Use when the user asks for Lighter market data, Lighter account or trading code, Lighter DEX websocket updates, Lighter order books, Lighter tracker workflows, Lighter error handling, or converting raw Lighter API usage to idiomatic Lighter.Net.
+description: Build C#/.NET Lighter DEX integrations with JKorf.Lighter.Net 1.1.0+, including ExchangeApi REST clients, websocket subscriptions and socket requests, account reads, order placement/cancellation, leverage and margin updates, LighterCredentials with EthKey, L1 signing, optional integrator fees, Lighter spot and perpetual symbols, signer-backed transactions, local order books, trackers, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, and SharedApis access including IFundingRateRestClient. Use when the user asks for Lighter market data, Lighter account or trading code, Lighter DEX websocket updates, Lighter order books, Lighter tracker workflows, Lighter error handling, or converting raw Lighter API usage to idiomatic Lighter.Net.
 ---
 
 # Lighter.Net
@@ -63,20 +63,24 @@ Public market data does not need credentials:
 var client = new LighterRestClient();
 ```
 
-Private account, trading, leverage, margin, and signer-backed transaction calls need `LighterCredentials`:
+Private account, trading, leverage, margin, and signer-backed transaction calls need `LighterCredentials` with an `EthKey`:
 
 ```csharp
 var client = new LighterRestClient(options =>
 {
     options.ApiCredentials = new LighterCredentials(
-        publicAddress: "PUBLIC_ADDRESS",
+        ethKey: EthKey.FromPrivateKey("PRIVATE_KEY"),
         accountIndex: 123,
         apiKeyIndex: 5,
         apiSecret: "API_SECRET");
 });
 ```
 
+Use `EthKey.FromPrivateKey(...)` when L1 signing is needed. Use `EthKey.FromPublicKey(...)` only for authenticated API-key requests that do not require layer-1 signatures. Do not pass a raw public address string to `LighterCredentials` in version 1.1.0+.
+
 Use placeholders or environment variables in generated code. Do not hardcode real credentials. `GenerateApiKey()` returns a local keypair result; it does not replace account setup or credential storage.
+
+Lighter.Net uses Lighter's optional integrator-code mechanism by default. Set `IntegratorFeePercentage = 0m` or `null` on REST/socket options only when the user explicitly asks to disable the optional integrator fee.
 
 ## Result Handling
 
@@ -190,7 +194,8 @@ When working in ASP.NET Core or worker services, prefer DI and reuse clients:
 ```csharp
 services.AddLighter(options =>
 {
-    options.ApiCredentials = new LighterCredentials("PUBLIC_ADDRESS", 123, 5, "API_SECRET");
+    options.Rest.ApiCredentials = new LighterCredentials(EthKey.FromPrivateKey("PRIVATE_KEY"), 123, 5, "API_SECRET");
+    options.Socket.ApiCredentials = new LighterCredentials(EthKey.FromPrivateKey("PRIVATE_KEY"), 123, 5, "API_SECRET");
 });
 ```
 
@@ -209,4 +214,4 @@ Inject `ILighterRestClient` and `ILighterSocketClient`, plus `ILighterOrderBookF
 - Read `references/api-surfaces.md` for endpoint groups and client roots.
 - Read `references/usage.md` for task-specific snippets.
 - Read `references/safety.md` for account, trading, leverage, margin, and credential guardrails.
-- In a maintainer checkout with sibling repositories, read `../Lighter.Net/Examples/` for complete examples.
+- In a maintainer checkout with sibling repositories, read `../Lighter.Net/Examples/ai-friendly/` for complete AI-oriented examples and `../Lighter.Net/AGENTS.md` for the library-maintained guidance.

@@ -1,6 +1,6 @@
 # Lighter.Net Usage
 
-Use these snippets as patterns. Keep generated code async, check `Success`, and prefer the current local examples in `../Lighter.Net/Examples/` for complete programs.
+Use these snippets as patterns. Keep generated code async, check `Success`, and prefer the current local examples in `../Lighter.Net/Examples/ai-friendly/` for complete programs.
 
 ## Base Imports
 
@@ -64,7 +64,7 @@ if (!klines.Success)
 ```csharp
 var client = new LighterRestClient(options =>
 {
-    options.ApiCredentials = new LighterCredentials("PUBLIC_ADDRESS", 123, 5, "API_SECRET");
+    options.ApiCredentials = new LighterCredentials(EthKey.FromPrivateKey("PRIVATE_KEY"), 123, 5, "API_SECRET");
 });
 
 var account = await client.ExchangeApi.Account.GetAccountsAsync();
@@ -180,7 +180,7 @@ if (!klineSub.Success)
 ```csharp
 var socket = new LighterSocketClient(options =>
 {
-    options.ApiCredentials = new LighterCredentials("PUBLIC_ADDRESS", 123, 5, "API_SECRET");
+    options.ApiCredentials = new LighterCredentials(EthKey.FromPrivateKey("PRIVATE_KEY"), 123, 5, "API_SECRET");
 });
 
 var orderSub = await socket.ExchangeApi.Trading.SubscribeToOrderUpdatesAsync(
@@ -227,7 +227,9 @@ Use this when the user wants exchange-agnostic code.
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new LighterRestClient().ExchangeApi.SharedClient;
+var lighterRest = new LighterRestClient();
+ISpotTickerRestClient tickers = lighterRest.ExchangeApi.SharedClient;
+var capabilities = lighterRest.ExchangeApi.SharedClient.Discover();
 var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USDC");
 
 var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
@@ -340,17 +342,35 @@ using Lighter.Net.Interfaces.Clients;
 
 services.AddLighter(options =>
 {
-    options.ApiCredentials = new LighterCredentials("PUBLIC_ADDRESS", 123, 5, "API_SECRET");
+    options.Rest.ApiCredentials = new LighterCredentials(EthKey.FromPrivateKey("PRIVATE_KEY"), 123, 5, "API_SECRET");
+    options.Socket.ApiCredentials = new LighterCredentials(EthKey.FromPrivateKey("PRIVATE_KEY"), 123, 5, "API_SECRET");
 });
 ```
 
 Inject `ILighterRestClient`, `ILighterSocketClient`, `ILighterOrderBookFactory`, `ILighterTrackerFactory`, or `ILighterUserClientProvider` depending on the workflow.
 
+## Integrator Fee
+
+Lighter.Net uses Lighter's optional integrator-code mechanism by default. Disable it only when explicitly requested:
+
+```csharp
+var client = new LighterRestClient(options =>
+{
+    options.ApiCredentials = new LighterCredentials(EthKey.FromPrivateKey("PRIVATE_KEY"), 123, 5, "API_SECRET");
+    options.IntegratorFeePercentage = 0m;
+});
+```
+
+Use `null` or `0m` to disable the optional fee. Socket options expose the same property for socket transaction requests.
+
 ## Local Examples
 
 When available, read:
 
-- `../Lighter.Net/Examples/Lighter.Examples.Console/Program.cs`
+- `../Lighter.Net/Examples/ai-friendly/01-quickstart.cs`
+- `../Lighter.Net/Examples/ai-friendly/02-trading.cs`
+- `../Lighter.Net/Examples/ai-friendly/03-websocket.cs`
+- `../Lighter.Net/Examples/ai-friendly/04-multi-exchange.cs`
+- `../Lighter.Net/Examples/ai-friendly/05-error-handling.cs`
 - `../Lighter.Net/Examples/Lighter.Examples.OrderBook/Program.cs`
 - `../Lighter.Net/Examples/Lighter.Examples.Tracker/Program.cs`
-- `../Lighter.Net/Examples/Lighter.Examples.Api/Program.cs`
