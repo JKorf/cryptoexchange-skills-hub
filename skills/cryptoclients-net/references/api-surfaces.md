@@ -45,6 +45,29 @@ Each operation family exposes getters for supported shared clients, for example:
 
 Single-client getters are nullable. `GetExchangeSharedClients(exchange, tradingMode)` returns every registered `ISharedClient` matching that exchange and optional mode.
 
+## Asset Classification And Symbol Catalogs
+
+`SharedSpotSymbol` and `SharedFuturesSymbol` classify both sides of a market with:
+
+- `BaseAssetType` and `QuoteAssetType`: `SharedAssetType.Unspecified`, `Crypto`, `Fiat`, or `TradFi`
+- `BaseAssetSubType` and `QuoteAssetSubType`: nullable `SharedAssetSubType.StableCoin`, `Equity`, or `Commodity`
+
+Use `Unspecified` when the exchange or client cannot classify an asset. Valid subtype relationships are:
+
+- `Crypto` + `StableCoin`
+- `TradFi` + `Equity`
+- `TradFi` + `Commodity`
+- `Fiat` without a subtype
+
+`GetSymbolsRequest` accepts `baseAssetType`, `baseAssetSubType`, `quoteAssetType`, and `quoteAssetSubType` filters in addition to `tradingMode` and `exchangeParameters`. The same request works with spot and futures symbol methods. Invalid type/subtype combinations fail request validation.
+
+For cached lookup, retrieve a concrete symbol client:
+
+- `GetSpotSymbolClient(exchange)` returns nullable `ISpotSymbolRestClient`; after a successful `GetSpotSymbolsAsync(...)`, read `SpotSymbolCatalog`.
+- `GetFuturesSymbolClient(tradingMode, exchange)` returns nullable `IFuturesSymbolRestClient`; after a successful `GetFuturesSymbolsAsync(...)`, read `FuturesSymbolCatalog`.
+
+Both properties are nullable `SharedSymbolCatalog` instances and are maintained separately. `SharedSymbolCatalog.Exchange` identifies the exchange, `Assets` is keyed by asset name and contains `SharedAssetInfo` (`Name`, `Type`, `SubType`), and `Symbols` is keyed by the exchange symbol name. Do not read either catalog before its corresponding symbol fetch.
+
 ## Direct Native Clients
 
 `ExchangeRestClient` exposes `Aster`, `Binance`, `BingX`, `Bitfinex`, `Bitget`, `BitMart`, `BitMEX`, `Bitstamp`, `BloFin`, `Bybit`, `Coinbase`, `CoinEx`, `CoinGecko`, `CoinW`, `CryptoCom`, `DeepCoin`, `GateIo`, `HTX`, `HyperLiquid`, `Kraken`, `Kucoin`, `Mexc`, `OKX`, `Polymarket`, `Toobit`, `Upbit`, `Weex`, `WhiteBit`, and `XT`.

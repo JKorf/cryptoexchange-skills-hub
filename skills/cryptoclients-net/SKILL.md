@@ -1,6 +1,6 @@
 ---
 name: cryptoclients-net
-description: Build C#/.NET multi-exchange integrations with CryptoClients.Net, focusing on aggregate CryptoExchange.Net SharedApis REST and websocket workflows, capability discovery, shared symbols and models, per-exchange results, async fan-out, credentials, dependency injection, cross-exchange order books, trackers, and user client providers. Also use for full native exchange API access through ExchangeRestClient and ExchangeSocketClient properties when shared interfaces do not expose the required endpoint or model.
+description: Build C#/.NET multi-exchange integrations with CryptoClients.Net, focusing on aggregate CryptoExchange.Net SharedApis REST and websocket workflows, capability discovery, shared symbols and models, asset-type filtering, cached symbol catalogs, per-exchange results, async fan-out, credentials, dependency injection, cross-exchange order books, trackers, and user client providers. Also use for full native exchange API access through ExchangeRestClient and ExchangeSocketClient properties when shared interfaces do not expose the required endpoint or model.
 ---
 
 # CryptoClients.Net
@@ -85,6 +85,14 @@ if (tickerClient != null)
 
 Use plural getters such as `GetSpotTickerClients()`, `GetOrderBookClients(mode)`, or `GetFuturesOrderClients(mode)` to enumerate supported clients. Use `GetExchangeSharedClients(exchange, tradingMode)` to inspect all shared interfaces exposed by one exchange.
 
+## Asset Types And Symbol Catalogs
+
+Use `SharedAssetType` and `SharedAssetSubType` to classify or filter the base and quote assets returned by shared symbol APIs. Pass the filters through `GetSymbolsRequest`; do not infer asset classes from exchange-specific symbol names.
+
+Access `SpotSymbolCatalog` through an `ISpotSymbolRestClient` and `FuturesSymbolCatalog` through an `IFuturesSymbolRestClient`. Fetch the corresponding symbols successfully before reading a catalog because each property is `null` until its client cache has been populated.
+
+Read `references/api-surfaces.md` for enum values, model properties, valid type/subtype combinations, and catalog structure. Read `references/usage.md` for filtering and catalog lookup examples.
+
 ## Full Exchange API Access
 
 The aggregate clients expose the bundled native clients directly:
@@ -138,7 +146,7 @@ Use `IExchangeOrderBookFactory` for individual books or `CreateCrossExchange(...
 
 ## References
 
-- Read `references/api-surfaces.md` for aggregate methods, direct clients, discovery, DI, credentials, factories, and result types.
-- Read `references/usage.md` for practical aggregate, native, websocket, credentials, and DI patterns.
+- Read `references/api-surfaces.md` for aggregate methods, direct clients, discovery, asset classifications, symbol catalogs, DI, credentials, factories, and result types.
+- Read `references/usage.md` for practical aggregate, native, symbol filtering/catalog, websocket, credentials, and DI patterns.
 - Read `references/safety.md` before credentials, private data, orders, leverage, transfers, withdrawals, or production fan-out.
 - In a maintainer checkout, read `../CryptoClients.Net/Examples/ai-friendly/` for current examples. When an example and a public interface differ, follow the current interface signature and result type.

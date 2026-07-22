@@ -5,6 +5,7 @@
 - Aggregate REST fan-out
 - Async-enumerable fan-out
 - Capability discovery
+- Asset-type filtering and symbol catalogs
 - Full native API access
 - Aggregate websocket subscriptions
 - Typed and dynamic credentials
@@ -70,6 +71,63 @@ foreach (var supported in client.GetFuturesTickerClients(TradingMode.PerpetualLi
 ```
 
 Use `GetExchangeSharedClients(exchange, mode)` with shared-client extension helpers when dynamically composing capabilities.
+
+## Asset-Type Filtering And Symbol Catalogs
+
+Filter aggregate symbol requests without relying on exchange-specific names:
+
+```csharp
+var request = new GetSymbolsRequest(
+    baseAssetType: SharedAssetType.TradFi,
+    baseAssetSubType: SharedAssetSubType.Equity,
+    quoteAssetType: SharedAssetType.Crypto,
+    quoteAssetSubType: SharedAssetSubType.StableCoin);
+
+var results = await client.GetFuturesSymbolsAsync(
+    request,
+    new[] { Exchange.Binance, Exchange.Bybit, Exchange.OKX });
+
+foreach (var result in results.Where(x => x.Success))
+    Console.WriteLine($"{result.Exchange}: {result.Data.Length} equity markets");
+```
+
+Use a concrete shared symbol client when a reusable catalog is needed. Fetch symbols before reading the nullable catalog:
+
+```csharp
+var spotSymbols = client.GetSpotSymbolClient(Exchange.Binance)
+    ?? throw new NotSupportedException("Binance spot symbols are unavailable");
+
+var result = await spotSymbols.GetSpotSymbolsAsync(new GetSymbolsRequest());
+if (!result.Success)
+    throw new InvalidOperationException(result.Error?.ToString());
+
+var catalog = spotSymbols.SpotSymbolCatalog!;
+
+if (catalog.Assets.TryGetValue("USDT", out var usdt))
+    Console.WriteLine($"{usdt.Name}: {usdt.Type} / {usdt.SubType}");
+
+if (catalog.Symbols.TryGetValue("BTCUSDT", out var btcUsdt))
+    Console.WriteLine($"{btcUsdt.BaseAsset}/{btcUsdt.QuoteAsset}");
+```
+
+Futures catalogs follow the same lifecycle, but select the trading mode when retrieving the client:
+
+```csharp
+var futuresSymbols = client.GetFuturesSymbolClient(
+    TradingMode.PerpetualLinear,
+    Exchange.Binance);
+
+if (futuresSymbols != null)
+{
+    var result = await futuresSymbols.GetFuturesSymbolsAsync(
+        new GetSymbolsRequest(tradingMode: TradingMode.PerpetualLinear));
+
+    if (result.Success)
+        Console.WriteLine(futuresSymbols.FuturesSymbolCatalog!.Symbols.Count);
+}
+```
+
+Treat `SharedAssetType.Unspecified` and a `null` subtype as unknown classification, not as evidence that the asset is cryptocurrency. `StableCoin` belongs to `Crypto`; `Equity` and `Commodity` belong to `TradFi`; fiat assets have no subtype.
 
 ## Full Native API Access
 

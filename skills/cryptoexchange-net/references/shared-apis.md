@@ -49,6 +49,67 @@ Different exchanges format symbols differently. The shared client translates `Sh
 
 For unusual asset names, aliases, or exchange-specific symbol mappings, inspect the exchange library docs/source and the shared symbol support methods on the relevant shared client.
 
+## Asset Classification And Symbol Catalogs
+
+`SharedSpotSymbol` and `SharedFuturesSymbol` classify both sides of a market with:
+
+- `BaseAssetType` and `QuoteAssetType`: `SharedAssetType.Unspecified`, `Crypto`, `Fiat`, or `TradFi`
+- `BaseAssetSubType` and `QuoteAssetSubType`: nullable `SharedAssetSubType.StableCoin`, `Equity`, or `Commodity`
+
+Treat `Unspecified` and a `null` subtype as unknown classification. Do not assume an unclassified asset is cryptocurrency. Valid subtype relationships are:
+
+- `Crypto` + `StableCoin`
+- `TradFi` + `Equity`
+- `TradFi` + `Commodity`
+- `Fiat` without a subtype
+
+Filter either spot or futures symbol discovery with `GetSymbolsRequest`:
+
+```csharp
+var request = new GetSymbolsRequest(
+    baseAssetType: SharedAssetType.TradFi,
+    baseAssetSubType: SharedAssetSubType.Equity,
+    quoteAssetType: SharedAssetType.Crypto,
+    quoteAssetSubType: SharedAssetSubType.StableCoin);
+
+var result = await futuresSymbolClient.GetFuturesSymbolsAsync(request);
+```
+
+The request also accepts `tradingMode` and `exchangeParameters`. Invalid asset type/subtype combinations fail request validation.
+
+Each shared symbol client exposes a nullable cached catalog. Populate and use a spot catalog as follows:
+
+```csharp
+ISpotSymbolRestClient symbols = new BinanceRestClient().SpotApi.SharedClient;
+
+var result = await symbols.GetSpotSymbolsAsync(new GetSymbolsRequest());
+if (!result.Success)
+{
+    Console.WriteLine(result.Error);
+    return;
+}
+
+var catalog = symbols.SpotSymbolCatalog!;
+
+if (catalog.Assets.TryGetValue("USDT", out var usdt))
+    Console.WriteLine($"{usdt.Name}: {usdt.Type} / {usdt.SubType}");
+
+if (catalog.Symbols.TryGetValue("BTCUSDT", out var btcUsdt))
+    Console.WriteLine($"{btcUsdt.BaseAsset}/{btcUsdt.QuoteAsset}");
+```
+
+Use the same lifecycle for futures:
+
+```csharp
+var result = await futuresSymbolClient.GetFuturesSymbolsAsync(
+    new GetSymbolsRequest(tradingMode: TradingMode.PerpetualLinear));
+
+if (result.Success)
+    Console.WriteLine(futuresSymbolClient.FuturesSymbolCatalog!.Symbols.Count);
+```
+
+`SpotSymbolCatalog` and `FuturesSymbolCatalog` are separate `SharedSymbolCatalog` instances. `Exchange` identifies the exchange, `Assets` is keyed by asset name and contains `SharedAssetInfo` (`Name`, `Type`, `SubType`), and `Symbols` is keyed by the native exchange symbol name. Never read a catalog before the corresponding successful symbol request.
+
 ## REST Interface Families
 
 Market data:

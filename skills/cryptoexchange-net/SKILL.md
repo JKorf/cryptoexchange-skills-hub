@@ -1,6 +1,6 @@
 ---
 name: cryptoexchange-net
-description: Build C#/.NET applications with the CryptoExchange.Net ecosystem, especially exchange-agnostic workflows using CryptoExchange.Net.SharedApis, CryptoClients.Net, HttpResult REST handling, WebSocketResult subscription handling, symbol normalization, DI setup, websocket lifecycle, package selection, and multi-exchange code. Use when the user asks to integrate multiple crypto exchanges, write code that can swap between Binance/Kucoin/OKX/Bybit/Kraken/etc., use shared clients, inspect balances/tickers/orders through common interfaces, build arbitrage/best-execution/portfolio tools, or choose the right CryptoExchange.Net-based package.
+description: Build C#/.NET applications with the CryptoExchange.Net ecosystem, especially exchange-agnostic workflows using CryptoExchange.Net.SharedApis, CryptoClients.Net, HttpResult REST handling, WebSocketResult subscription handling, symbol normalization, asset-type filtering, cached symbol catalogs, DI setup, websocket lifecycle, package selection, and multi-exchange code. Use when the user asks to integrate multiple crypto exchanges, write code that can swap between Binance/Kucoin/OKX/Bybit/Kraken/etc., use shared clients, classify or discover shared assets and symbols, inspect balances/tickers/orders through common interfaces, build arbitrage/best-execution/portfolio tools, or choose the right CryptoExchange.Net-based package.
 ---
 
 # CryptoExchange.Net
@@ -101,6 +101,14 @@ var linearPerp = new SharedSymbol(TradingMode.PerpetualLinear, "BTC", "USDT");
 Do not pass native symbols such as `BTCUSDT`, `BTC-USDT`, or exchange-specific contract names into shared request types. Let the shared client translate symbols to native format.
 
 When using native exchange clients instead of SharedApis, use that exchange's native symbol format.
+
+## Asset Classification And Symbol Catalogs
+
+Use `SharedAssetType` and `SharedAssetSubType` instead of inferring asset classes from native symbol names. `SharedSpotSymbol` and `SharedFuturesSymbol` expose type and optional subtype properties for both the base and quote assets. Filter symbol discovery with the corresponding `GetSymbolsRequest` parameters.
+
+Read `SpotSymbolCatalog` only from an `ISpotSymbolRestClient` after a successful `GetSpotSymbolsAsync(...)` call. Read `FuturesSymbolCatalog` only from an `IFuturesSymbolRestClient` after a successful `GetFuturesSymbolsAsync(...)` call. Both catalog properties are `null` until the corresponding client cache has been populated.
+
+Read `references/shared-apis.md` for enum values, valid type/subtype combinations, catalog structure, and lookup examples.
 
 ## Multi-Exchange Concurrency
 
@@ -218,7 +226,7 @@ Default to read-only examples. For trading examples, prefer explicit limit order
 
 ## References
 
-- Read `references/shared-apis.md` for detailed cross-exchange interfaces, examples, pagination, and capability checks.
+- Read `references/shared-apis.md` for detailed cross-exchange interfaces, asset classification, symbol catalogs, examples, pagination, and capability checks.
 - Read `references/ecosystem.md` for repository names and NuGet package IDs.
 - Read `references/safety.md` before account, trading, futures, withdrawal, or credential-handling code.
 
