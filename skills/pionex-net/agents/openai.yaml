@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pionex.Net"
+  short_description: "Build C# Pionex spot integrations."
+  default_prompt: "Use $pionex-net to implement a Pionex.Net REST, websocket, account, trading, or SharedApis workflow."
