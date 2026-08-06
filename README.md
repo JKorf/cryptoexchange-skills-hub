@@ -71,6 +71,7 @@ cp -R "./skills/$skill/." "$agent_skills_dir/$skill/"
 | `hyperliquid-net` | Building HyperLiquid SpotApi, FuturesApi, REST, websocket, account, staking, vault, perpetual futures, or trading workflows with `HyperLiquid.Net` |
 | `kraken-net` | Building Kraken SpotApi, FuturesApi, Earn, REST, websocket, account, futures, or trading workflows with `Kraken.Net` |
 | `kucoin-net` | Building KuCoin SpotApi, FuturesApi, UnifiedApi, REST, websocket, account, margin, futures, or trading workflows with `Kucoin.Net` |
+| `lbank-net` | Building LBank SpotApi REST, websocket, account, wallet, order book, tracker, SharedApis, or spot trading workflows with `LBank.Net` |
 | `lighter-net` | Building Lighter DEX ExchangeApi, REST, websocket, account, order book, tracker, SharedApis, or trading workflows with `Lighter.Net` |
 | `mexc-net` | Building MEXC SpotApi, FuturesApi, REST, websocket, account, private streams, futures, or trading workflows with `Mexc.Net` |
 | `okx-net` | Building OKX UnifiedApi, REST, websocket, account, spot, derivatives, copy trading, socket order request, or trading workflows with `OKX.Net` |
@@ -84,7 +85,7 @@ cp -R "./skills/$skill/." "$agent_skills_dir/$skill/"
 
 ## Ecosystem Scope
 
-The hub is for the open source CryptoExchange.Net library family, including Aster.Net, Binance.Net, BingX.Net, Bitfinex.Net, Bitget.Net, BitMart.Net, BitMEX.Net, Bitstamp.Net, BloFin.Net, Bybit.Net, Coinbase.Net, CoinEx.Net, CoinGecko.Net, CoinW.Net, CryptoClients.Net, CryptoCom.Net, DeepCoin.Net, GateIo.Net, HTX.Net, HyperLiquid.Net, Kraken.Net, Kucoin.Net, Lighter.Net, Mexc.Net, OKX.Net, Pionex.Net, Polymarket.Net, Toobit.Net, Upbit.Net, Weex.Net, WhiteBit.Net, and XT.Net.
+The hub is for the open source CryptoExchange.Net library family, including Aster.Net, Binance.Net, BingX.Net, Bitfinex.Net, Bitget.Net, BitMart.Net, BitMEX.Net, Bitstamp.Net, BloFin.Net, Bybit.Net, Coinbase.Net, CoinEx.Net, CoinGecko.Net, CoinW.Net, CryptoClients.Net, CryptoCom.Net, DeepCoin.Net, GateIo.Net, HTX.Net, HyperLiquid.Net, Kraken.Net, Kucoin.Net, LBank.Net, Lighter.Net, Mexc.Net, OKX.Net, Pionex.Net, Polymarket.Net, Toobit.Net, Upbit.Net, Weex.Net, WhiteBit.Net, and XT.Net.
 
 ## Design Principles
 

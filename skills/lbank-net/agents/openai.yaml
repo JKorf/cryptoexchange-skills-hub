@@ -1,0 +1,4 @@
+interface:
+  display_name: "LBank.Net"
+  short_description: "Build C# LBank spot integrations."
+  default_prompt: "Use $lbank-net to implement an LBank.Net REST, websocket, account, trading, wallet, or SharedApis workflow."
