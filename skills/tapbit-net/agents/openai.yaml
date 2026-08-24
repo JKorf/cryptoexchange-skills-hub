@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tapbit.Net"
+  short_description: "Build C# Tapbit spot REST integrations."
+  default_prompt: "Use $tapbit-net to implement a Tapbit.Net spot REST, account, limit-order, batch, tracker, or SharedApis workflow."

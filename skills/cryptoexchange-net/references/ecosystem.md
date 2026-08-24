@@ -33,6 +33,7 @@ Use these NuGet package IDs when generating install commands.
 | OKX.Net | `JK.OKX.Net` |
 | Pionex.Net | `Pionex.Net` |
 | Polymarket.Net | `Polymarket.Net` |
+| Tapbit.Net | `Tapbit.Net` |
 | Toobit.Net | `Toobit.Net` |
 | Upbit.Net | `JKorf.Upbit.Net` |
 | Weex.Net | `Weex.Net` |
