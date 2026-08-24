@@ -13,10 +13,12 @@ Use `cryptoexchange-net` instead when the user wants the same code to run across
 
 ## Setup
 
+This skill targets `GateIo.Net` 4.6.0, the latest published stable release verified on 2026-08-24.
+
 Install the exchange package:
 
 ```bash
-dotnet add package GateIo.Net
+dotnet add package GateIo.Net --version 4.6.0
 ```
 
 Use these namespaces in examples:

@@ -139,4 +139,3 @@ Implemented USD futures REST shared interfaces include:
 Implemented spot socket shared interfaces include `ITickerSocketClient`, `ITradeSocketClient`, `IBookTickerSocketClient`, `IBalanceSocketClient`, `ISpotOrderSocketClient`, `IKlineSocketClient`, and `IOrderBookSocketClient`.
 
 Implemented USD futures socket shared interfaces include `ITickersSocketClient`, `ITickerSocketClient`, `ITradeSocketClient`, `IBookTickerSocketClient`, `IBalanceSocketClient`, `IKlineSocketClient`, `IFuturesOrderSocketClient`, `IPositionSocketClient`, and `IOrderBookSocketClient`.
-

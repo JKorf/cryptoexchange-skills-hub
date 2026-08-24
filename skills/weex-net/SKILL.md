@@ -11,8 +11,10 @@ Use `Weex.Net` for Weex-specific C# code involving spot, futures, account data, 
 
 ## Setup
 
+This skill targets `Weex.Net` 2.4.0, the latest published stable release verified on 2026-08-24.
+
 ```bash
-dotnet add package Weex.Net
+dotnet add package Weex.Net --version 2.4.0
 ```
 
 ```csharp

@@ -80,3 +80,6 @@ Common shared interfaces include:
 - `IPositionRestClient`
 - `ITickerSocketClient`
 - `IOrderBookSocketClient`
+- `ISpotOrderManagementSocketClient`
+- `IFuturesOrderManagementSocketClient`
+

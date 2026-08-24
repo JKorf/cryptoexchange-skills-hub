@@ -13,10 +13,12 @@ Use `cryptoexchange-net` instead when the user wants the same code to run across
 
 ## Setup
 
+This skill targets `JK.OKX.Net` 5.4.0, the latest published stable release verified on 2026-08-24.
+
 Install the package:
 
 ```bash
-dotnet add package JK.OKX.Net
+dotnet add package JK.OKX.Net --version 5.4.0
 ```
 
 Use these namespaces in examples:

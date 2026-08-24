@@ -179,7 +179,10 @@ Websocket:
 - `IBookTickerSocketClient`, `IOrderBookSocketClient`
 - `ITradeSocketClient`, `IKlineSocketClient`
 - `ISpotOrderSocketClient`, `IFuturesOrderSocketClient`
+- `ISpotOrderManagementSocketClient`, `IFuturesOrderManagementSocketClient`
 - `IBalanceSocketClient`, `IPositionSocketClient`, `IUserTradeSocketClient`
+
+The order-management socket interfaces place and cancel orders through websocket request APIs and return `QueryResult<SharedId>`.
 
 Not every exchange implements every shared interface. Code against the narrowest interface required and handle unsupported-operation failures.
 

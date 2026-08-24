@@ -175,6 +175,13 @@ Private streams:
 - `IBalanceSocketClient`: balance updates
 - `IPositionSocketClient`: position updates
 
+Authenticated websocket requests:
+
+- `ISpotOrderManagementSocketClient`: place and cancel spot orders over websocket
+- `IFuturesOrderManagementSocketClient`: place and cancel futures orders over websocket
+
+These request interfaces return `QueryResult<SharedId>`, not `WebSocketResult<UpdateSubscription>`. They are currently implemented by selected clients, including Binance, Bitfinex, and OKX; check interface support before routing dynamically. `SharedId.Id` can be null when an exchange acknowledges a request without returning an identifier.
+
 Always close subscriptions on shutdown:
 
 ```csharp

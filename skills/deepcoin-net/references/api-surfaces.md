@@ -130,3 +130,4 @@ Supported shared trading modes include `TradingMode.Spot`, `TradingMode.Perpetua
 - Shared non-I/O helpers: `ExchangeCallResult<T>`
 
 Always check `Success` before using `Data`. Cancellation and batch cancel methods return result objects that still need inspection after outer success.
+

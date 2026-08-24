@@ -15,10 +15,12 @@ LBank.Net currently exposes Spot only. Do not invent futures, derivatives, margi
 
 ## Setup
 
+This skill targets `LBank.Net` 1.1.0, the latest published stable release verified on 2026-08-24.
+
 Install:
 
 ```bash
-dotnet add package LBank.Net
+dotnet add package LBank.Net --version 1.1.0
 ```
 
 Use:

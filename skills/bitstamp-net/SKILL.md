@@ -13,10 +13,12 @@ Use `cryptoexchange-net` instead when the user wants the same code to run across
 
 ## Setup
 
+This skill targets `Bitstamp.Net` 2.4.0, the latest published stable release verified on 2026-08-24.
+
 Install the exchange package:
 
 ```bash
-dotnet add package Bitstamp.Net
+dotnet add package Bitstamp.Net --version 2.4.0
 ```
 
 Use these namespaces in examples:

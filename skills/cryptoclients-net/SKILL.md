@@ -13,8 +13,10 @@ Use an individual exchange skill instead when the application targets only one e
 
 ## Setup
 
+This skill targets `CryptoClients.Net` 5.6.0, the latest published stable release verified on 2026-08-24.
+
 ```bash
-dotnet add package CryptoClients.Net
+dotnet add package CryptoClients.Net --version 5.6.0
 ```
 
 ```csharp
@@ -107,6 +109,8 @@ Use native access when the shared request lacks an option, the shared model omit
 
 Current source exposes direct REST clients for all bundled libraries, including CoinGecko and Polymarket, and direct socket clients for socket-capable libraries. CoinGecko and Polymarket are not currently part of the aggregate `_sharedClients` list, so use their direct properties.
 
+Configure `GlobalExchangeOptions.EnabledExchanges` when only a subset should be available; native clients and factories are created lazily on first access.
+
 ## Websocket Fan-Out
 
 ```csharp
@@ -135,6 +139,7 @@ Do not use the obsolete `SetApiCredentials(exchange, apiKey, apiSecret, apiPass)
 services.AddCryptoClients(options =>
 {
     options.RequestTimeout = TimeSpan.FromSeconds(15);
+    options.EnabledExchanges = new[] { Exchange.Binance, Exchange.Kraken, Exchange.OKX };
 });
 ```
 
@@ -143,6 +148,8 @@ services.AddCryptoClients(options =>
 ## Order Books And Trackers
 
 Use `IExchangeOrderBookFactory` for individual books or `CreateCrossExchange(...)` for a combined cross-exchange book. Use `IExchangeTrackerFactory` for kline, trade, spot-user-data, and futures-user-data trackers. Factory methods can return `null` when an exchange or trading mode is unsupported.
+
+Call `CanCreateKlineTracker(exchange, symbol, interval)` or `CanCreateTradeTracker(exchange, symbol)` before creating those trackers when support is determined dynamically.
 
 ## References
 

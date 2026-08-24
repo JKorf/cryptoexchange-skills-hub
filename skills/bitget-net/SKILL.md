@@ -13,10 +13,12 @@ Use `cryptoexchange-net` instead when the user wants the same code to run across
 
 ## Setup
 
+This skill targets `JK.Bitget.Net` 4.5.0, the latest published stable release verified on 2026-08-24.
+
 Install the exchange package:
 
 ```bash
-dotnet add package JK.Bitget.Net
+dotnet add package JK.Bitget.Net --version 4.5.0
 ```
 
 Use these namespaces in examples:

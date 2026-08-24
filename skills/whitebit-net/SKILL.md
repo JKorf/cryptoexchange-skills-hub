@@ -11,8 +11,10 @@ Use `WhiteBit.Net` for WhiteBit-specific spot, collateral/perpetual, account, fu
 
 ## Setup
 
+This skill targets `WhiteBit.Net` 4.4.0, the latest published stable release verified on 2026-08-24.
+
 ```bash
-dotnet add package WhiteBit.Net
+dotnet add package WhiteBit.Net --version 4.4.0
 ```
 
 ```csharp

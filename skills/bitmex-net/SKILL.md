@@ -13,10 +13,12 @@ Use `cryptoexchange-net` instead when the user wants the same code to run across
 
 ## Setup
 
+This skill targets `JKorf.BitMEX.Net` 4.4.0, the latest published stable release verified on 2026-08-24.
+
 Install the exchange package:
 
 ```bash
-dotnet add package JKorf.BitMEX.Net
+dotnet add package JKorf.BitMEX.Net --version 4.4.0
 ```
 
 Use these namespaces in examples:

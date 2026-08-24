@@ -13,10 +13,12 @@ Polymarket uses CLOB token ids and market/condition ids, not trading symbols suc
 
 ## Setup
 
+This skill targets `Polymarket.Net` 4.4.0, the latest published stable release verified on 2026-08-24.
+
 Install the package:
 
 ```bash
-dotnet add package Polymarket.Net
+dotnet add package Polymarket.Net --version 4.4.0
 ```
 
 Use these namespaces in examples:

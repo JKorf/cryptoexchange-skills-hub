@@ -15,10 +15,12 @@ Pionex.Net currently exposes Spot only. Do not invent futures, perpetual, margin
 
 ## Setup
 
+This skill targets `Pionex.Net` 1.2.0, the latest published stable release verified on 2026-08-24.
+
 Install:
 
 ```bash
-dotnet add package Pionex.Net
+dotnet add package Pionex.Net --version 1.2.0
 ```
 
 Use:

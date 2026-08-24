@@ -108,5 +108,6 @@ Implemented socket shared interfaces include:
 - `IBookTickerSocketClient`
 - `IBalanceSocketClient`
 - `ISpotOrderSocketClient`
+- `ISpotOrderManagementSocketClient`
 - `IKlineSocketClient`
 - `IUserTradeSocketClient`

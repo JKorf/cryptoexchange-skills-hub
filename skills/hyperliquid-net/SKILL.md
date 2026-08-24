@@ -13,10 +13,12 @@ Use `cryptoexchange-net` instead when the user wants the same code to run across
 
 ## Setup
 
+This skill targets `HyperLiquid.Net` 5.7.0, the latest published stable release verified on 2026-08-24.
+
 Install the exchange package:
 
 ```bash
-dotnet add package HyperLiquid.Net
+dotnet add package HyperLiquid.Net --version 5.7.0
 ```
 
 Use these namespaces in examples:

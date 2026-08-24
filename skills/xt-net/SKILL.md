@@ -11,8 +11,10 @@ Use `XT.Net` for XT-specific spot, USDT-M futures, Coin-M futures, account, trad
 
 ## Setup
 
+This skill targets `XT.Net` 4.5.0, the latest published stable release verified on 2026-08-24.
+
 ```bash
-dotnet add package XT.Net
+dotnet add package XT.Net --version 4.5.0
 ```
 
 ```csharp

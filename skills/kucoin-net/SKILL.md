@@ -13,10 +13,12 @@ Use `cryptoexchange-net` instead when the user wants the same code to run across
 
 ## Setup
 
+This skill targets `Kucoin.Net` 9.5.0, the latest published stable release verified on 2026-08-24.
+
 Install the package:
 
 ```bash
-dotnet add package Kucoin.Net
+dotnet add package Kucoin.Net --version 9.5.0
 ```
 
 Use these namespaces in examples:

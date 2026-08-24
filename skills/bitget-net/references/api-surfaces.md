@@ -140,4 +140,3 @@ Implemented futures REST shared interfaces include:
 Implemented spot socket shared interfaces include `ITickerSocketClient`, `ITradeSocketClient`, `IBookTickerSocketClient`, `IBalanceSocketClient`, `ISpotOrderSocketClient`, `IUserTradeSocketClient`, `IKlineSocketClient`, and `IOrderBookSocketClient`.
 
 Implemented futures socket shared interfaces include `ITickerSocketClient`, `ITradeSocketClient`, `IBookTickerSocketClient`, `IBalanceSocketClient`, `IKlineSocketClient`, `IOrderBookSocketClient`, `IPositionSocketClient`, `IFuturesOrderSocketClient`, and `IUserTradeSocketClient`.
-

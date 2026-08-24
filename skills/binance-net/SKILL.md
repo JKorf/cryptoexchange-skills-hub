@@ -13,10 +13,12 @@ Use `cryptoexchange-net` instead when the user wants the same code to run across
 
 ## Setup
 
+This skill targets `Binance.Net` 13.5.0, the latest published stable release verified on 2026-08-24.
+
 Install the exchange package:
 
 ```bash
-dotnet add package Binance.Net
+dotnet add package Binance.Net --version 13.5.0
 ```
 
 Use these namespaces in examples:

@@ -96,3 +96,14 @@ Common shared interfaces include:
 - `IPositionRestClient`
 - `ITickerSocketClient`
 - `IOrderBookSocketClient`
+
+## Futures V3 Strategy Orders
+
+`client.FuturesV3Api.Trading` includes chase and multi-leg strategy workflows:
+
+- `PlaceChaseOrderAsync(...)`
+- `PlaceStrategyOrderAsync(StrategyType, IEnumerable<AsterStrategyOrderRequest>, ...)`
+- `EditStrategyOrderAsync(...)`
+- `GetOpenStrategyOrderAsync(...)` and `GetClosedStrategyOrderAsync(...)`
+
+Strategy operations can create or change futures exposure. Read the safety reference and inspect nested order results rather than treating outer success as proof that every leg succeeded.

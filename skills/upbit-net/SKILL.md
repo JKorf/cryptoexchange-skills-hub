@@ -13,10 +13,12 @@ Use `cryptoexchange-net` when the user wants portable public market-data code th
 
 ## Setup
 
+This skill targets `JKorf.Upbit.Net` 3.4.0, the latest published stable release verified on 2026-08-24.
+
 Install the package:
 
 ```bash
-dotnet add package JKorf.Upbit.Net
+dotnet add package JKorf.Upbit.Net --version 3.4.0
 ```
 
 Use these namespaces:

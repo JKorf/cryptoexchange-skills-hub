@@ -70,7 +70,7 @@ Both properties are nullable `SharedSymbolCatalog` instances and are maintained 
 
 ## Direct Native Clients
 
-`ExchangeRestClient` exposes `Aster`, `Binance`, `BingX`, `Bitfinex`, `Bitget`, `BitMart`, `BitMEX`, `Bitstamp`, `BloFin`, `Bybit`, `Coinbase`, `CoinEx`, `CoinGecko`, `CoinW`, `CryptoCom`, `DeepCoin`, `GateIo`, `HTX`, `HyperLiquid`, `Kraken`, `Kucoin`, `Mexc`, `OKX`, `Polymarket`, `Toobit`, `Upbit`, `Weex`, `WhiteBit`, and `XT`.
+`ExchangeRestClient` exposes `Aster`, `Binance`, `BingX`, `Bitfinex`, `Bitget`, `BitMart`, `BitMEX`, `Bitstamp`, `BloFin`, `Bybit`, `Coinbase`, `CoinEx`, `CoinGecko`, `CoinW`, `CryptoCom`, `DeepCoin`, `GateIo`, `HTX`, `HyperLiquid`, `Kraken`, `Kucoin`, `LBank`, `Lighter`, `Mexc`, `OKX`, `Pionex`, `Polymarket`, `Toobit`, `Upbit`, `Weex`, `WhiteBit`, and `XT`.
 
 `ExchangeSocketClient` exposes the same socket-capable native clients except CoinGecko.
 
@@ -80,6 +80,8 @@ CoinGecko and Polymarket direct properties exist, but current aggregate SharedAp
 
 `GlobalExchangeOptions` can apply credentials, environment names, proxy, original-data output, timeout, rate limiting, caching, reconnect policy, and reconnect interval across clients.
 
+`GlobalExchangeOptions.EnabledExchanges` limits which exchanges are available. Exchange clients, trackers, order-book factories, and user-client providers are initialized lazily; accessing a disabled exchange fails instead of silently constructing it.
+
 `ExchangeCredentials` stores typed credentials per exchange. `DynamicCredentials` carries `TradingMode`, key, and up to three exchange-specific parameters. Inspect requirements through `ExchangeCredentials.GetDynamicCredentialInfo(mode, exchange)` before constructing dynamic credentials.
 
 Set credentials on aggregate REST/socket clients through `SetApiCredentials(ExchangeCredentials)` or `SetApiCredentials(exchange, DynamicCredentials)`.
@@ -88,7 +90,7 @@ Set credentials on aggregate REST/socket clients through `SetApiCredentials(Exch
 
 `AddCryptoClients(...)` registers all bundled native clients and aggregate interfaces. It accepts global options, per-exchange library option delegates, optional socket-client lifetime, or an `IConfiguration` section.
 
-`IExchangeOrderBookFactory` creates one/many local books and `ICrossExchangeBook` instances. `IExchangeTrackerFactory` creates kline, trade, and user-data trackers. `IExchangeUserClientProvider` caches aggregate REST/socket clients by user identifier.
+`IExchangeOrderBookFactory` creates one/many local books and `ICrossExchangeBook` instances. `IExchangeTrackerFactory` creates kline, trade, and user-data trackers; use `CanCreateKlineTracker(...)` and `CanCreateTradeTracker(...)` for dynamic capability checks. `IExchangeUserClientProvider` caches aggregate REST/socket clients by user identifier.
 
 ## Result Types
 

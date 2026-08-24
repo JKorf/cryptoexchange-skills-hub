@@ -13,10 +13,12 @@ Use `cryptoexchange-net` instead when the user wants the same code to run across
 
 ## Setup
 
+This skill targets `JKorf.Lighter.Net` 1.5.0, the latest published stable release verified on 2026-08-24.
+
 Install the exchange package:
 
 ```bash
-dotnet add package JKorf.Lighter.Net
+dotnet add package JKorf.Lighter.Net --version 1.5.0
 ```
 
 Use these namespaces in examples:

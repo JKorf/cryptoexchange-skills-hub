@@ -246,6 +246,8 @@ Implemented socket shared interfaces:
 - `IBalanceSocketClient`
 - `ISpotOrderSocketClient`
 - `IFuturesOrderSocketClient`
+- `ISpotOrderManagementSocketClient`
+- `IFuturesOrderManagementSocketClient`
 - `IUserTradeSocketClient`
 - `IPositionSocketClient`
 
