@@ -1,6 +1,6 @@
 ---
 name: coinbase-net
-description: Build C#/.NET Coinbase integrations with Coinbase.Net, including AdvancedTradeApi REST clients, ExchangeApi market data, Advanced Trade and Exchange websocket subscriptions, accounts, portfolios, product metadata, spot and futures/perpetual trading, dry-run order workflows, deposits, withdrawals, transfers, ECDSA CoinbaseCredentials with key name and private key, dash-separated Coinbase product ids, dependency injection, HttpResult REST handling, CoinbaseOrderResult placement handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for Coinbase Advanced Trade market data, Coinbase account or trading code, Coinbase websocket updates, Coinbase error handling, or converting raw Coinbase API usage to idiomatic Coinbase.Net.
+description: Build C#/.NET Coinbase integrations with Coinbase.Net, including AdvancedTradeApi REST clients, ExchangeApi market data, Advanced Trade and Exchange websocket subscriptions, accounts, portfolios, product metadata, spot and futures/perpetual trading, dry-run order workflows, deposits, withdrawals, transfers, ECDSA CoinbaseCredentials with key name and private key, dash-separated Coinbase product ids, dependency injection, HttpResult REST handling, CoinbaseOrderResult placement handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Coinbase Advanced Trade market data, Coinbase account or trading code, Coinbase websocket updates, Coinbase error handling, or converting raw Coinbase API usage to idiomatic Coinbase.Net.
 ---
 
 # Coinbase.Net
@@ -51,10 +51,10 @@ Current source-checked API surfaces:
 - `rest.AdvancedTradeApi.ExchangeData`: Advanced Trade products, candles, order books, trades, book tickers, fiat/crypto assets, exchange rates, buy/sell/spot prices
 - `rest.AdvancedTradeApi.Account`: accounts, portfolios, portfolio transfers, futures/perpetual account settings and balances, fees, API key info, payment methods, converts, deposits, withdrawals, transactions, deposit addresses
 - `rest.AdvancedTradeApi.Trading`: Advanced Trade orders, edits, cancels, fills, futures positions, perpetual positions, and close-position calls
-- `rest.AdvancedTradeApi.SharedClient`: exchange-agnostic SharedApis REST interfaces for spot and Coinbase futures/perpetual workflows
+- `rest.AdvancedTradeApi.SharedApi`: exchange-agnostic SharedApis REST interfaces for spot and Coinbase futures/perpetual workflows
 - `rest.ExchangeApi.ExchangeData`: Coinbase Exchange server time, assets, and symbols
 - `socket.AdvancedTradeApi`: Advanced Trade heartbeat, trades, klines, tickers, symbols, order book, user updates, and futures balance updates
-- `socket.AdvancedTradeApi.SharedClient`: exchange-agnostic SharedApis socket interfaces for spot and Coinbase futures/perpetual workflows
+- `socket.AdvancedTradeApi.SharedApi`: exchange-agnostic SharedApis socket interfaces for spot and Coinbase futures/perpetual workflows
 - `socket.ExchangeApi`: Coinbase Exchange heartbeat, exchange info, ticker, batched ticker, and order book streams
 
 Do not use exchange roots from other libraries such as `SpotApi`, `UsdFuturesApi`, `CoinFuturesApi`, `PerpetualFuturesApi`, `FuturesApiV2`, `SpotApiV3`, `V5Api`, or `ExchangeApi` as the primary trading root. In Coinbase.Net, `ExchangeApi` exists, but it is the Coinbase Exchange market-data surface, not the Advanced Trade trading surface.
@@ -178,19 +178,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-var shared = new CoinbaseRestClient().AdvancedTradeApi.SharedClient;
-var info = shared.Discover();
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
+using var client = new CoinbaseRestClient();
+IGetTickerRest ticker = client.AdvancedTradeApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USD")));
 ```
 
-Coinbase exposes shared clients on `AdvancedTradeApi.SharedClient`. Shared REST and socket support `TradingMode.Spot`, `TradingMode.PerpetualLinear`, and `TradingMode.DeliveryLinear`. Call `Discover()` before routing optional shared features. Do not mix Coinbase-native request/model types with `SharedApis` request/model types.
+Use `ICoinbaseSharedApiClient` as the exchange aggregate. Its aggregate properties—`AdvancedTradeRest`, `AdvancedTradeSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Coinbase-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

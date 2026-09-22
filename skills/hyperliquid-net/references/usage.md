@@ -254,15 +254,18 @@ var sub = await socket.FuturesApi.Trading.SubscribeToOrderUpdatesAsync(
 
 When `address` is `null`, authenticated streams use the address from credentials.
 
-## SharedApis Futures Ticker
+## Shared API V2
+
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-IFuturesTickerRestClient tickers = new HyperLiquidRestClient().FuturesApi.SharedClient;
+using var client = new HyperLiquidRestClient();
+IGetTickerRest ticker = client.FuturesApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.PerpetualLinear, "ETH", "USDC");
 
-var result = await tickers.GetFuturesTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
     Console.WriteLine(result.Error);
@@ -272,7 +275,19 @@ if (!result.Success)
 Console.WriteLine(result.Data.LastPrice);
 ```
 
-Use native HyperLiquid APIs for builder fees, vaults, staking, HIP-3 DEX, and detailed TWAP/trigger behavior.
+Inject `IHyperLiquidSharedApiClient` when a service needs multiple HyperLiquid Shared API surfaces. It exposes `SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Dependency Injection
 

@@ -296,48 +296,40 @@ if (!orderSub.Success)
 await socket.UnsubscribeAsync(orderSub.Data);
 ```
 
-## SharedApis REST
+## Shared API V2
 
-Use this when the user wants exchange-agnostic code.
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
-using Bitget.Net.Clients;
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new BitgetRestClient().SpotApiV2.SharedClient;
+using var client = new BitgetRestClient();
+IGetTickerRest ticker = client.SpotApiV2.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
 
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
-    Console.WriteLine($"[{tickers.Exchange}] Failed: {result.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
-Console.WriteLine($"[{tickers.Exchange}] {result.Data.Symbol}: {result.Data.LastPrice}");
+Console.WriteLine(result.Data.LastPrice);
 ```
 
-## SharedApis Websocket
+Inject `IBitgetSharedApiClient` when a service needs multiple Bitget Shared API surfaces. It exposes `SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
 
 ```csharp
-var socket = new BitgetSocketClient();
-ITickerSocketClient tickers = socket.SpotApiV2.SharedClient;
-var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
 
-var sub = await tickers.SubscribeToTickerUpdatesAsync(
-    new SubscribeTickerRequest(symbol),
-    update => Console.WriteLine($"[{tickers.Exchange}] {update.Data.Symbol}: {update.Data.LastPrice}"));
-
-if (!sub.Success)
-{
-    Console.WriteLine($"Subscribe failed: {sub.Error}");
+if (match is null)
     return;
-}
 
-await socket.UnsubscribeAsync(sub.Data);
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
 
-Shared socket interfaces do not expose `UnsubscribeAsync`; keep the concrete socket client and call `socket.UnsubscribeAsync(sub.Data)`.
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Error Handling And Retry
 
@@ -387,7 +379,7 @@ services.AddBitget(options =>
 });
 ```
 
-Inject `IBitgetRestClient` and `IBitgetSocketClient`, or follow the consuming project's existing interface pattern. `AddBitget` registers shared REST and socket interfaces for both `SpotApiV2.SharedClient` and `FuturesApiV2.SharedClient`.
+Inject `IBitgetRestClient` and `IBitgetSocketClient`, or follow the consuming project's existing interface pattern. `AddBitget` registers shared REST and socket interfaces for both `SpotApiV2.SharedApi` and `FuturesApiV2.SharedApi`.
 
 ## Local Examples
 
@@ -398,4 +390,3 @@ When available, read:
 - `../Bitget.Net/Examples/ai-friendly/03-websocket.cs`
 - `../Bitget.Net/Examples/ai-friendly/04-multi-exchange.cs`
 - `../Bitget.Net/Examples/ai-friendly/05-error-handling.cs`
-

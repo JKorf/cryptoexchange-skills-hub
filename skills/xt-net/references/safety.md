@@ -46,7 +46,7 @@ Use this file before generating credentials, trading, leverage, position, withdr
 - Keep handlers fast, observe subscription failures, and unsubscribe during shutdown.
 - Current source exposes `XTEnvironment.Live` and custom environments, not a built-in testnet.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis for portable spot/futures workflows.
 - Use native APIs for XT-specific account, token/listen-key, trigger, and detailed model behavior.

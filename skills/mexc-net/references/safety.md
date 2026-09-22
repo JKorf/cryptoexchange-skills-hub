@@ -62,7 +62,7 @@ Use this file before generating Mexc credential, account, transfer, withdrawal, 
 - Futures private streams use authenticated socket subscriptions directly.
 - For long-running user data services, consider `IMexcTrackerFactory` instead of ad hoc subscription management.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis when the user needs exchange-agnostic code.
 - Use native Mexc APIs for subaccounts, spot listen-key handling, detailed futures leverage/position mode, plan orders, TP/SL, trailing orders, close-all, reverse-position, transfer, and withdrawal details.

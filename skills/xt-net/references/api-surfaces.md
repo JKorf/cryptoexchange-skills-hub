@@ -14,14 +14,14 @@
 
 REST:
 
-- `SpotApi.ExchangeData`, `SpotApi.Account`, `SpotApi.Trading`, `SpotApi.SharedClient`
-- `UsdtFuturesApi.ExchangeData`, `UsdtFuturesApi.Account`, `UsdtFuturesApi.Trading`, `UsdtFuturesApi.SharedClient`
-- `CoinFuturesApi.ExchangeData`, `CoinFuturesApi.Account`, `CoinFuturesApi.Trading`, `CoinFuturesApi.SharedClient`
+- `SpotApi.ExchangeData`, `SpotApi.Account`, `SpotApi.Trading`, `SpotApi.SharedApi`
+- `UsdtFuturesApi.ExchangeData`, `UsdtFuturesApi.Account`, `UsdtFuturesApi.Trading`, `UsdtFuturesApi.SharedApi`
+- `CoinFuturesApi.ExchangeData`, `CoinFuturesApi.Account`, `CoinFuturesApi.Trading`, `CoinFuturesApi.SharedApi`
 
 Socket:
 
-- `SpotApi` and `SpotApi.SharedClient`
-- `FuturesApi` and `FuturesApi.SharedClient`
+- `SpotApi` and `SpotApi.SharedApi`
+- `FuturesApi` and `FuturesApi.SharedApi`
 
 The REST futures products are separate; the websocket futures surface is combined.
 
@@ -56,15 +56,39 @@ Futures public streams include trades, klines, tickers, aggregate tickers, index
 
 Private stream overloads accept an explicit token/listen key. Overloads without one require credentials and acquire/maintain the key internally.
 
-## SharedApis
+## Shared API V2
 
-Spot REST implements assets, balances, deposits, withdrawals, withdraw, transfers, klines, order books, recent trades, tickers, symbols, orders, fees, and book tickers.
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-Futures REST implements balances, klines, order books, recent trades, funding rates, symbols, tickers, leverage, open interest, orders, fees, trigger orders, TP/SL, and book tickers.
+- `restClient.SpotApi.SharedApi`
+- `socketClient.SpotApi.SharedApi`
+- `restClient.UsdtFuturesApi.SharedApi`
+- `restClient.CoinFuturesApi.SharedApi`
+- `socketClient.FuturesApi.SharedApi`
 
-Spot socket implements balances, klines, order books, tickers, trades, user trades, and spot orders. Futures socket implements balances, klines, order books, tickers, trades, user trades, futures orders, and positions.
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-Call `SharedClient.Discover()` to inspect supported interfaces at runtime.
+The exchange aggregate is `IXTSharedApiClient`. It exposes:
+
+- `SpotRest` as `IXTRestClientSpotSharedApi`
+- `UsdtFuturesRest` as `IXTRestClientFuturesSharedApi`
+- `CoinFuturesRest` as `IXTRestClientFuturesSharedApi`
+- `SpotSocket` as `IXTSocketClientSpotSharedApi`
+- `FuturesSocket` as `IXTSocketClientFuturesSharedApi`
+
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `IXTSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Factories And Providers
 

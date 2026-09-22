@@ -220,47 +220,40 @@ if (!order.Success)
 }
 ```
 
-## SharedApis REST
+## Shared API V2
 
-Use this when the user wants exchange-agnostic code.
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-var lighterRest = new LighterRestClient();
-ISpotTickerRestClient tickers = lighterRest.ExchangeApi.SharedClient;
-var capabilities = lighterRest.ExchangeApi.SharedClient.Discover();
+using var client = new LighterRestClient();
+IGetTickerRest ticker = client.ExchangeApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USDC");
 
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
-    Console.WriteLine($"[{tickers.Exchange}] Failed: {result.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
-Console.WriteLine($"[{tickers.Exchange}] {result.Data.Symbol}: {result.Data.LastPrice}");
+Console.WriteLine(result.Data.LastPrice);
 ```
 
-## SharedApis Websocket
+Inject `ILighterSharedApiClient` when a service needs multiple Lighter Shared API surfaces. It exposes `Rest`, `Socket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
 
 ```csharp
-var socket = new LighterSocketClient();
-ITickerSocketClient tickers = socket.ExchangeApi.SharedClient;
-var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USDC");
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
 
-var sub = await tickers.SubscribeToTickerUpdatesAsync(
-    new SubscribeTickerRequest(symbol),
-    update => Console.WriteLine($"[{tickers.Exchange}] {update.Data.Symbol}: {update.Data.LastPrice}"));
-
-if (!sub.Success)
-{
-    Console.WriteLine($"Subscribe failed: {sub.Error}");
+if (match is null)
     return;
-}
 
-await socket.UnsubscribeAsync(sub.Data);
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Local Order Book
 

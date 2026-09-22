@@ -67,7 +67,7 @@ Use this file before generating Gate.io credential, account, transfer, withdrawa
 - Authenticated futures user streams often require `userId` plus settlement asset.
 - Socket order request methods return `QueryResult<T>` and can place/cancel live orders. Treat them like trading endpoints.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis when the user needs exchange-agnostic code.
 - Use native GateIo APIs for Gate.io-specific details such as `RebateApi`, `AlphaApi`, unified account operations, settlement-asset routing, and detailed trigger-order parameters.

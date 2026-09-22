@@ -212,7 +212,7 @@ var order = await client.UsdtFuturesV5Api.Trading.PlaceOrderAsync(
     reduceOnly: false);
 ```
 
-Use `UsdtFuturesV5Api` for native V5 features. Use `UsdtFuturesApi.SharedClient` for SharedApis futures portability.
+Use `UsdtFuturesV5Api` for native V5 features. Use `UsdtFuturesApi.SharedApi` for SharedApis futures portability.
 
 ## Public Websocket Subscription
 
@@ -263,15 +263,18 @@ var orders = await socket.UsdtFuturesApi.SubscribeToOrderUpdatesAsync(
     update => Console.WriteLine(update.Data.OrderId));
 ```
 
-## SharedApis Spot Ticker
+## Shared API V2
+
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new HTXRestClient().SpotApi.SharedClient;
+using var client = new HTXRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USDT");
 
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
     Console.WriteLine(result.Error);
@@ -281,7 +284,19 @@ if (!result.Success)
 Console.WriteLine(result.Data.LastPrice);
 ```
 
-Use native HTX APIs for HTX-specific details such as spot account ids, margin loans, V5 futures, and detailed futures trigger/TP-SL behavior.
+Inject `IHTXSharedApiClient` when a service needs multiple HTX Shared API surfaces. It exposes `SpotRest`, `UsdtFuturesRest`, `SpotSocket`, `UsdtFuturesSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Dependency Injection
 

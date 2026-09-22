@@ -73,41 +73,30 @@ Sockets commonly use:
 
 Confirm exact overloads from the local library source or `../Bitfinex.Net/Examples/ai-friendly/` before generating non-trivial code.
 
-## SharedApis Surfaces
+## Shared API V2
 
-Use `.SharedClient` when writing exchange-agnostic code:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
+
+- `restClient.ExchangeApi.SharedApi`
+- `socketClient.ExchangeApi.SharedApi`
+
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
+
+The exchange aggregate is `IBitfinexSharedApiClient`. It exposes:
+
+- `Rest` as `IBitfinexRestClientExchangeSharedApi`
+- `Socket` as `IBitfinexSocketClientExchangeSharedApi`
+
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
 ```csharp
-var sharedSpot = new BitfinexRestClient().ExchangeApi.SharedClient;
-var sharedSocket = new BitfinexSocketClient().ExchangeApi.SharedClient;
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
 
-Implemented REST shared interfaces include:
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
 
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotOrderRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `ITradeHistoryRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `IFeeRestClient`
-- `ISpotTriggerOrderRestClient`
-- `IBookTickerRestClient`
-- `ITransferRestClient`
-
-Implemented socket shared interfaces include:
-
-- `ITickerSocketClient`
-- `ITradeSocketClient`
-- `IBookTickerSocketClient`
-- `IBalanceSocketClient`
-- `ISpotOrderSocketClient`
-- `ISpotOrderManagementSocketClient`
-- `IKlineSocketClient`
-- `IUserTradeSocketClient`
+The library's DI registration registers `IBitfinexSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.

@@ -1,6 +1,6 @@
 ---
 name: cryptocom-net
-description: Build C#/.NET Crypto.com integrations with CryptoCom.Net, including ExchangeApi REST clients, ExchangeApi websocket subscriptions, market data, account balances, deposits, withdrawals, staking, spot trading, margin, derivatives/perpetuals, positions, order placement/cancellation, OCO orders, CryptoComCredentials, Crypto.com underscore spot symbols, derivative instrument symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, CallResult batch-item handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for Crypto.com exchange market data, Crypto.com account or trading code, Crypto.com derivatives, Crypto.com staking, Crypto.com websocket updates, Crypto.com error handling, or converting raw Crypto.com API usage to idiomatic CryptoCom.Net.
+description: Build C#/.NET Crypto.com integrations with CryptoCom.Net, including ExchangeApi REST clients, ExchangeApi websocket subscriptions, market data, account balances, deposits, withdrawals, staking, spot trading, margin, derivatives/perpetuals, positions, order placement/cancellation, OCO orders, CryptoComCredentials, Crypto.com underscore spot symbols, derivative instrument symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, CallResult batch-item handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Crypto.com exchange market data, Crypto.com account or trading code, Crypto.com derivatives, Crypto.com staking, Crypto.com websocket updates, Crypto.com error handling, or converting raw Crypto.com API usage to idiomatic CryptoCom.Net.
 ---
 
 # CryptoCom.Net
@@ -162,19 +162,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new CryptoComRestClient().ExchangeApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+using var client = new CryptoComRestClient();
+IGetTickerRest ticker = client.ExchangeApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-Do not mix Crypto.com-native request/model types with `SharedApis` request/model types.
+Use `ICryptoComSharedApiClient` as the exchange aggregate. Its aggregate properties—`Rest`, `Socket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix CryptoCom-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 
@@ -187,7 +192,7 @@ services.AddCryptoCom(options =>
 });
 ```
 
-Inject `ICryptoComRestClient` and `ICryptoComSocketClient`, or the registered Crypto.com REST/socket client interfaces used by the target project. `AddCryptoCom` also registers supported SharedApis interfaces from `ExchangeApi.SharedClient`.
+Inject `ICryptoComRestClient` and `ICryptoComSocketClient`, or the registered Crypto.com REST/socket client interfaces used by the target project. `AddCryptoCom` also registers supported SharedApis interfaces from `ExchangeApi.SharedApi`.
 
 ## Safety Rules
 

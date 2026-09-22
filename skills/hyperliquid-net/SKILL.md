@@ -1,6 +1,6 @@
 ---
 name: hyperliquid-net
-description: Build C#/.NET HyperLiquid integrations with HyperLiquid.Net, including SpotApi, FuturesApi, REST, websocket subscriptions and queries, market data, balances, account ledger, staking, vaults, transfers, withdrawals, builder fees, HIP-3 DEX parameters, spot and perpetual orders, TWAP, triggers, TP/SL, leverage, positions, HyperLiquidCredentials, native symbol formats, dependency injection, HttpResult, WebSocketResult, QueryResult, trackers, and SharedApis. Use for HyperLiquid market data, account, trading, perpetual futures, websocket, error handling, or idiomatic HyperLiquid.Net code.
+description: Build C#/.NET HyperLiquid integrations with HyperLiquid.Net, including SpotApi, FuturesApi, REST, websocket subscriptions and queries, market data, balances, account ledger, staking, vaults, transfers, withdrawals, builder fees, HIP-3 DEX parameters, spot and perpetual orders, TWAP, triggers, TP/SL, leverage, positions, HyperLiquidCredentials, native symbol formats, dependency injection, HttpResult, WebSocketResult, QueryResult, trackers, and Shared API V2 strict capabilities and aggregates. Use for HyperLiquid market data, account, trading, perpetual futures, websocket, error handling, or idiomatic HyperLiquid.Net code.
 ---
 
 # HyperLiquid.Net
@@ -48,13 +48,13 @@ var socket = new HyperLiquidSocketClient();
 
 Primary REST API surfaces:
 
-- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Trading`, `rest.SpotApi.SharedClient`
-- `rest.FuturesApi.ExchangeData`, `rest.FuturesApi.Account`, `rest.FuturesApi.Trading`, `rest.FuturesApi.SharedClient`
+- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Trading`, `rest.SpotApi.SharedApi`
+- `rest.FuturesApi.ExchangeData`, `rest.FuturesApi.Account`, `rest.FuturesApi.Trading`, `rest.FuturesApi.SharedApi`
 
 Primary socket API surfaces:
 
-- `socket.SpotApi.ExchangeData`, `socket.SpotApi.Account`, `socket.SpotApi.Trading`, `socket.SpotApi.SharedClient`
-- `socket.FuturesApi.ExchangeData`, `socket.FuturesApi.Account`, `socket.FuturesApi.Trading`, `socket.FuturesApi.SharedClient`
+- `socket.SpotApi.ExchangeData`, `socket.SpotApi.Account`, `socket.SpotApi.Trading`, `socket.SpotApi.SharedApi`
+- `socket.FuturesApi.ExchangeData`, `socket.FuturesApi.Account`, `socket.FuturesApi.Trading`, `socket.FuturesApi.SharedApi`
 
 HyperLiquid.Net does not expose Binance-style roots such as `UsdFuturesApi`, `CoinFuturesApi`, `UnifiedApi`, or `V5Api`. Use `FuturesApi` for HyperLiquid perpetual futures.
 
@@ -203,21 +203,24 @@ Native socket request/query methods mirror many REST methods and return `QueryRe
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-IFuturesTickerRestClient tickers = new HyperLiquidRestClient().FuturesApi.SharedClient;
-var result = await tickers.GetFuturesTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.PerpetualLinear, "ETH", "USDC")));
+using var client = new HyperLiquidRestClient();
+IGetTickerRest ticker = client.FuturesApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.PerpetualLinear, "ETH", "USDC")));
 ```
 
-HyperLiquid.Net exposes SharedApis from both `SpotApi.SharedClient` and `FuturesApi.SharedClient` on REST and socket clients.
+Use `IHyperLiquidSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
 
-Do not mix HyperLiquid-native request/model types with `SharedApis` request/model types.
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix HyperLiquid-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 
@@ -230,7 +233,7 @@ services.AddHyperLiquid(options =>
 });
 ```
 
-Inject `IHyperLiquidRestClient` and `IHyperLiquidSocketClient`, or the registered HyperLiquid REST/socket client interfaces used by the target project. `AddHyperLiquid` also registers supported SharedApis interfaces from `SpotApi.SharedClient` and `FuturesApi.SharedClient`.
+Inject `IHyperLiquidRestClient` and `IHyperLiquidSocketClient`, or the registered HyperLiquid REST/socket client interfaces used by the target project. `AddHyperLiquid` also registers supported SharedApis interfaces from `SpotApi.SharedApi` and `FuturesApi.SharedApi`.
 
 ## Safety Rules
 

@@ -1,6 +1,6 @@
 ---
 name: toobit-net
-description: Build C#/.NET Toobit integrations with Toobit.Net, including Toobit.Net package setup, SpotApi, UsdtFuturesApi, REST clients, websocket subscriptions, spot market data, USDT futures market data, account balances, deposits, withdrawals, transfers, subaccounts, spot order placement/test/cancellation, futures order placement/cancellation, leverage, margin type, positions, trading stops, user data streams, ToobitCredentials authentication, Toobit spot symbols, Toobit USDT futures symbols, dependency injection, user client providers, order book/tracker factories, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for Toobit spot market data, Toobit account or trading code, Toobit USDT futures, Toobit websocket updates, Toobit user streams, Toobit error handling, or converting raw Toobit API usage to idiomatic Toobit.Net.
+description: Build C#/.NET Toobit integrations with Toobit.Net, including Toobit.Net package setup, SpotApi, UsdtFuturesApi, REST clients, websocket subscriptions, spot market data, USDT futures market data, account balances, deposits, withdrawals, transfers, subaccounts, spot order placement/test/cancellation, futures order placement/cancellation, leverage, margin type, positions, trading stops, user data streams, ToobitCredentials authentication, Toobit spot symbols, Toobit USDT futures symbols, dependency injection, user client providers, order book/tracker factories, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Toobit spot market data, Toobit account or trading code, Toobit USDT futures, Toobit websocket updates, Toobit user streams, Toobit error handling, or converting raw Toobit API usage to idiomatic Toobit.Net.
 ---
 
 # Toobit.Net
@@ -48,13 +48,13 @@ var socket = new ToobitSocketClient();
 
 Primary REST API surfaces:
 
-- `rest.SpotApi.ExchangeData`, `Account`, `Trading`, `SharedClient`
-- `rest.UsdtFuturesApi.ExchangeData`, `Account`, `Trading`, `SharedClient`
+- `rest.SpotApi.ExchangeData`, `Account`, `Trading`, `SharedApi`
+- `rest.UsdtFuturesApi.ExchangeData`, `Account`, `Trading`, `SharedApi`
 
 Primary socket API surfaces:
 
-- `socket.SpotApi`: spot public streams, user data streams, `SharedClient`
-- `socket.UsdtFuturesApi`: futures public streams, user data streams, `SharedClient`
+- `socket.SpotApi`: spot public streams, user data streams, `SharedApi`
+- `socket.UsdtFuturesApi`: futures public streams, user data streams, `SharedApi`
 
 Toobit.Net does not expose Binance `UsdFuturesApi`, Binance `CoinFuturesApi`, or OKX-style `UnifiedApi`. Use `UsdtFuturesApi` for Toobit USDT futures.
 
@@ -183,19 +183,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Authenticated user streams can be subscribed with credentials directly or with a listen key from `StartUserStreamAsync`. Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new ToobitRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+using var client = new ToobitRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-Toobit.Net exposes SharedApis from `SpotApi.SharedClient` and `UsdtFuturesApi.SharedClient` on REST and socket clients. Do not mix Toobit-native request/model types with SharedApis request/model types.
+Use `IToobitSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Toobit-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

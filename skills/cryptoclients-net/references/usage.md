@@ -2,75 +2,91 @@
 
 ## Contents
 
-- Aggregate REST fan-out
-- Async-enumerable fan-out
-- Capability discovery
+- Shared API V2 capability fan-out
+- Response-as-completed execution
+- Exchange aggregate access
 - Asset-type filtering and symbol catalogs
 - Full native API access
-- Aggregate websocket subscriptions
+- Shared websocket subscriptions
 - Typed and dynamic credentials
 - Dependency injection
 - Order books and trackers
 
-## Aggregate REST Fan-Out
+## Shared API V2 Capability Fan-Out
 
 ```csharp
 using CryptoClients.Net;
+using CryptoClients.Net.Clients;
 using CryptoClients.Net.Enums;
+using CryptoClients.Net.Interfaces;
+using CryptoExchange.Net;
 using CryptoExchange.Net.SharedApis;
 
-var client = new ExchangeRestClient();
+IExchangeSharedApiClient shared =
+    new ExchangeSharedApiClient(new CryptoClientsConfiguration());
 var request = new GetTickerRequest(
     new SharedSymbol(TradingMode.Spot, "BTC", "USDT"));
 
-var results = await client.GetSpotTickerAsync(
-    request,
+var matches = shared.GetCapabilities(
+    SharedCapabilities.Tickers.GetTicker.Rest,
+    TradingMode.Spot,
     new[] { Exchange.Binance, Exchange.Bybit, Exchange.Kraken, Exchange.OKX });
 
-foreach (var result in results)
+var calls = matches.Select(async match =>
+    (Match: match,
+     Result: await match.Capability.GetTickerAsync(request)));
+
+await foreach (var item in calls.ParallelEnumerateAsync())
 {
-    Console.WriteLine(result.Success
-        ? $"{result.Exchange}: {result.Data.LastPrice}"
-        : $"{result.Exchange}: {result.Error}");
+    Console.WriteLine(item.Result.Success
+        ? $"{item.Match.Exchange}: {item.Result.Data.LastPrice}"
+        : $"{item.Match.Exchange}: {item.Result.Error}");
 }
 ```
 
-For one exchange, put the exchange first and receive one result:
+For one exchange, resolve one preferred capability:
 
 ```csharp
-var result = await client.GetSpotTickerAsync(Exchange.Binance, request);
-```
+var match = shared.GetCapability(
+    Exchange.Binance,
+    SharedCapabilities.Tickers.GetTicker.Rest,
+    TradingMode.Spot);
 
-## Async-Enumerable Fan-Out
-
-Process results as exchanges respond:
-
-```csharp
-await foreach (var result in client.GetSpotTickerAsyncEnumerable(
-    request,
-    new[] { Exchange.Binance, Exchange.Bybit, Exchange.OKX }))
+if (match is not null)
 {
-    if (result.Success)
-        Console.WriteLine($"{result.Exchange}: {result.Data.LastPrice}");
+    var result = await match.Capability.GetTickerAsync(request);
 }
 ```
 
-## Capability Discovery
+## Response-As-Completed Execution
+
+Capability lookup does not send requests. Build tasks from the returned resolutions, then use `ParallelEnumerateAsync` to process results as exchanges respond:
 
 ```csharp
-var client = new ExchangeRestClient();
-var ticker = client.GetSpotTickerClient(Exchange.Binance);
+var calls = matches.Select(async match =>
+    (Match: match,
+     Result: await match.Capability.GetTickerAsync(request)));
 
-if (ticker != null)
+await foreach (var item in calls.ParallelEnumerateAsync())
 {
-    var result = await ticker.GetSpotTickerAsync(request);
+    if (item.Result.Success)
+        Console.WriteLine($"{item.Match.Exchange}: {item.Result.Data.LastPrice}");
 }
-
-foreach (var supported in client.GetFuturesTickerClients(TradingMode.PerpetualLinear))
-    Console.WriteLine(supported.Exchange);
 ```
 
-Use `GetExchangeSharedClients(exchange, mode)` with shared-client extension helpers when dynamically composing capabilities.
+## Exchange Aggregate Access
+
+```csharp
+var binance = shared.Binance;
+IGetTickerRest ticker = binance.SpotRest;
+
+var result = await ticker.GetTickerAsync(request);
+
+var dynamicClient = shared.GetClient(Exchange.Binance);
+var info = dynamicClient?.Discover();
+```
+
+Typed properties expose each exchange's aggregate at compile time. Use `GetClient` for dynamic exchange selection, `GetCapability` for one preferred operation, `GetCapabilities` for one preferred match per exchange, and `GetImplementations` when all matching transports or API surfaces are needed.
 
 ## Asset-Type Filtering And Symbol Catalogs
 
@@ -83,25 +99,33 @@ var request = new GetSymbolsRequest(
     quoteAssetType: SharedAssetType.Crypto,
     quoteAssetSubType: SharedAssetSubType.StableCoin);
 
-var results = await client.GetFuturesSymbolsAsync(
-    request,
+var matches = shared.GetCapabilities(
+    SharedCapabilities.Symbols.GetFuturesSymbols.Rest,
+    TradingMode.PerpetualLinear,
     new[] { Exchange.Binance, Exchange.Bybit, Exchange.OKX });
 
-foreach (var result in results.Where(x => x.Success))
-    Console.WriteLine($"{result.Exchange}: {result.Data.Length} equity markets");
+foreach (var match in matches)
+{
+    var result = await match.Capability.GetFuturesSymbolsAsync(request);
+    if (result.Success)
+        Console.WriteLine($"{match.Exchange}: {result.Data.Length} equity markets");
+}
 ```
 
 Use a concrete shared symbol client when a reusable catalog is needed. Fetch symbols before reading the nullable catalog:
 
 ```csharp
-var spotSymbols = client.GetSpotSymbolClient(Exchange.Binance)
+var spotSymbols = shared.GetCapability(
+    Exchange.Binance,
+    SharedCapabilities.Symbols.GetSpotSymbols.Rest,
+    TradingMode.Spot)
     ?? throw new NotSupportedException("Binance spot symbols are unavailable");
 
-var result = await spotSymbols.GetSpotSymbolsAsync(new GetSymbolsRequest());
+var result = await spotSymbols.Capability.GetSpotSymbolsAsync(new GetSymbolsRequest());
 if (!result.Success)
     throw new InvalidOperationException(result.Error?.ToString());
 
-var catalog = spotSymbols.SpotSymbolCatalog!;
+var catalog = spotSymbols.Capability.SpotSymbolCatalog!;
 
 if (catalog.Assets.TryGetValue("USDT", out var usdt))
     Console.WriteLine($"{usdt.Name}: {usdt.Type} / {usdt.SubType}");
@@ -113,17 +137,18 @@ if (catalog.Symbols.TryGetValue("BTCUSDT", out var btcUsdt))
 Futures catalogs follow the same lifecycle, but select the trading mode when retrieving the client:
 
 ```csharp
-var futuresSymbols = client.GetFuturesSymbolClient(
-    TradingMode.PerpetualLinear,
-    Exchange.Binance);
+var futuresSymbols = shared.GetCapability(
+    Exchange.Binance,
+    SharedCapabilities.Symbols.GetFuturesSymbols.Rest,
+    TradingMode.PerpetualLinear);
 
 if (futuresSymbols != null)
 {
-    var result = await futuresSymbols.GetFuturesSymbolsAsync(
+    var result = await futuresSymbols.Capability.GetFuturesSymbolsAsync(
         new GetSymbolsRequest(tradingMode: TradingMode.PerpetualLinear));
 
     if (result.Success)
-        Console.WriteLine(futuresSymbols.FuturesSymbolCatalog!.Symbols.Count);
+        Console.WriteLine(futuresSymbols.Capability.FuturesSymbolCatalog!.Symbols.Count);
 }
 ```
 
@@ -141,22 +166,26 @@ var okx = await client.OKX.UnifiedApi.ExchangeData.GetTickerAsync("ETH-USDT");
 
 Native methods use exchange-specific symbols, enums, requests, models, and result details. Read that exchange's skill before generating non-trivial native code.
 
-## Aggregate Websocket Subscriptions
+## Shared Websocket Subscriptions
 
 ```csharp
-var socket = new ExchangeSocketClient();
 var request = new SubscribeTickerRequest(
     new SharedSymbol(TradingMode.Spot, "BTC", "USDT"));
 
-var subscriptions = await socket.SubscribeToTickerUpdatesAsync(
-    request,
-    update => Console.WriteLine($"{update.Exchange}: {update.Data.LastPrice}"),
+var matches = shared.GetCapabilities(
+    SharedCapabilities.Tickers.SubscribeTicker,
+    TradingMode.Spot,
     new[] { Exchange.Binance, Exchange.Bybit, Exchange.OKX });
 
-foreach (var failed in subscriptions.Where(x => !x.Success))
-    Console.WriteLine($"{failed.Exchange}: {failed.Error}");
+var subscriptions = await Task.WhenAll(matches.Select(async match =>
+    (Match: match,
+     Result: await match.Capability.SubscribeToTickerUpdatesAsync(
+         request,
+         update => Console.WriteLine(
+             $"{match.Exchange}: {update.Data.LastPrice}")))));
 
-await socket.UnsubscribeAllAsync();
+foreach (var subscription in subscriptions.Where(x => x.Result.Success))
+    await subscription.Result.Data.CloseAsync();
 ```
 
 ## Typed And Dynamic Credentials
@@ -203,7 +232,7 @@ services.AddCryptoClients(options =>
 });
 ```
 
-Inject `IExchangeRestClient`, `IExchangeSocketClient`, `IExchangeOrderBookFactory`, `IExchangeTrackerFactory`, or `IExchangeUserClientProvider`.
+Inject `IExchangeSharedApiClient` for Shared API V2. Inject `IExchangeRestClient`, `IExchangeSocketClient`, `IExchangeOrderBookFactory`, `IExchangeTrackerFactory`, or `IExchangeUserClientProvider` for legacy aggregation, native access, and supporting services.
 
 ## Order Books And Trackers
 

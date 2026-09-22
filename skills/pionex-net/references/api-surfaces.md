@@ -87,33 +87,33 @@ Private streams authenticate through socket client credentials. Do not create a 
 
 Use `Pionex.Net.Enums.OrderSide`, `OrderType`, `SymbolType`, and `KlineInterval`.
 
-## SharedApis Interfaces
+## Shared API V2
 
-REST shared client: `client.SpotApi.SharedClient`
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-Implemented REST interfaces:
+- `restClient.SpotApi.SharedApi`
+- `socketClient.SpotApi.SharedApi`
 
-- `IBalanceRestClient`
-- `IBookTickerRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `ISpotOrderRestClient`
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-Socket shared client: `socket.SpotApi.SharedClient`
+The exchange aggregate is `IPionexSharedApiClient`. It exposes:
 
-Implemented socket interfaces:
+- `SpotRest` as `IPionexRestClientSpotSharedApi`
+- `SpotSocket` as `IPionexSocketClientSpotSharedApi`
 
-- `ITradeSocketClient`
-- `IOrderBookSocketClient`
-- `IBookTickerSocketClient`
-- `ISpotOrderSocketClient`
-- `IUserTradeSocketClient`
-- `IBalanceSocketClient`
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
-Call `SharedClient.Discover()` before relying on optional behavior.
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `IPionexSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Result Types
 

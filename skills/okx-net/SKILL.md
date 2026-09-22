@@ -1,6 +1,6 @@
 ---
 name: okx-net
-description: Build C#/.NET OKX integrations with OKX.Net, including JK.OKX.Net package setup, UnifiedApi, REST clients, websocket subscriptions, websocket order request methods, spot market data, derivatives market data, account balances, deposits, withdrawals, transfers, subaccounts, copy trading, spot order placement/check/cancellation, swap/futures/options order placement, algo orders, TP/SL orders, leverage, position mode, positions, OKXCredentials key/secret/passphrase authentication, OKX spot symbols, OKX swap/futures symbols, demo and Europe environment notes, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, ExchangeCallResult shared helper handling, trackers, and SharedApis access. Use when the user asks for OKX spot market data, OKX account or trading code, OKX swaps/futures/options, OKX websocket updates, OKX websocket order requests, OKX copy trading, OKX error handling, or converting raw OKX API usage to idiomatic OKX.Net.
+description: Build C#/.NET OKX integrations with OKX.Net, including JK.OKX.Net package setup, UnifiedApi, REST clients, websocket subscriptions, websocket order request methods, spot market data, derivatives market data, account balances, deposits, withdrawals, transfers, subaccounts, copy trading, spot order placement/check/cancellation, swap/futures/options order placement, algo orders, TP/SL orders, leverage, position mode, positions, OKXCredentials key/secret/passphrase authentication, OKX spot symbols, OKX swap/futures symbols, demo and Europe environment notes, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, trackers, and Shared API V2 strict capabilities and aggregates. Use when the user asks for OKX spot market data, OKX account or trading code, OKX swaps/futures/options, OKX websocket updates, OKX websocket order requests, OKX copy trading, OKX error handling, or converting raw OKX API usage to idiomatic OKX.Net.
 ---
 
 # OKX.Net
@@ -53,14 +53,14 @@ Primary REST API surfaces:
 - `rest.UnifiedApi.Trading`
 - `rest.UnifiedApi.SubAccounts`
 - `rest.UnifiedApi.CopyTrading`
-- `rest.UnifiedApi.SharedClient`
+- `rest.UnifiedApi.SharedApi`
 
 Primary socket API surfaces:
 
 - `socket.UnifiedApi.ExchangeData`: public market streams
 - `socket.UnifiedApi.Account`: private account, balance/position, deposit, withdrawal, and greeks streams
 - `socket.UnifiedApi.Trading`: private order/algo/user-trade/position streams plus websocket order request methods
-- `socket.UnifiedApi.SharedClient`
+- `socket.UnifiedApi.SharedApi`
 
 OKX.Net does not expose Binance-style roots such as `SpotApi`, `UsdFuturesApi`, `CoinFuturesApi`, or `V5Api`. Use `UnifiedApi` for OKX spot, margin, swaps, futures, and options.
 
@@ -215,21 +215,24 @@ Socket order request methods such as `socket.UnifiedApi.Trading.PlaceOrderAsync(
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new OKXRestClient().UnifiedApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+using var client = new OKXRestClient();
+IGetTickerRest ticker = client.UnifiedApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 ```
 
-OKX.Net exposes SharedApis from `UnifiedApi.SharedClient` on REST and socket clients.
+Use `IOKXSharedApiClient` as the exchange aggregate. Its aggregate properties—`Rest`, `Socket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
 
-Do not mix OKX-native request/model types with `SharedApis` request/model types.
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix OKX-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 
@@ -245,7 +248,7 @@ services.AddOKX(options =>
 });
 ```
 
-Inject `IOKXRestClient` and `IOKXSocketClient`, or the registered OKX REST/socket client interfaces used by the target project. `AddOKX` also registers supported SharedApis interfaces from `UnifiedApi.SharedClient`.
+Inject `IOKXRestClient` and `IOKXSocketClient`, or the registered OKX REST/socket client interfaces used by the target project. `AddOKX` also registers supported SharedApis interfaces from `UnifiedApi.SharedApi`.
 
 ## Safety Rules
 

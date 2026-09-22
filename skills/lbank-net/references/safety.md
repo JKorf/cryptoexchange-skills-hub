@@ -77,7 +77,7 @@ Read this file before generating LBank account, order, cancellation, withdrawal,
 - Clear cached user clients when credentials change.
 - Treat user identifiers as application data; validate them and do not expose secrets through identifiers or logs.
 
-## SharedApis
+## Shared API V2
 
 - Use native LBank APIs for exchange-specific metadata, wallet operations, and models.
 - Use SharedApis for portable exchange-agnostic workflows.

@@ -1,6 +1,6 @@
 ---
 name: kraken-net
-description: Build C#/.NET Kraken integrations with Kraken.Net, including KrakenExchange.Net package setup, SpotApi, FuturesApi, Earn endpoints, REST clients, websocket subscriptions, spot websocket request/order methods, spot market data, futures market data, account balances, deposits, withdrawals, transfers, Earn allocations, spot order placement/cancellation/editing, futures leverage, futures positions, futures order placement/cancellation/editing, KrakenCredentials with separate spot and futures HMAC credentials, Kraken REST spot symbols, Kraken spot websocket symbols, Kraken futures symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult spot websocket request handling, ExchangeCallResult shared helper handling, trackers, and SharedApis access. Use when the user asks for Kraken spot market data, Kraken account or trading code, Kraken futures, Kraken websocket updates, Kraken Earn, Kraken error handling, or converting raw Kraken API usage to idiomatic Kraken.Net.
+description: Build C#/.NET Kraken integrations with Kraken.Net, including KrakenExchange.Net package setup, SpotApi, FuturesApi, Earn endpoints, REST clients, websocket subscriptions, spot websocket request/order methods, spot market data, futures market data, account balances, deposits, withdrawals, transfers, Earn allocations, spot order placement/cancellation/editing, futures leverage, futures positions, futures order placement/cancellation/editing, KrakenCredentials with separate spot and futures HMAC credentials, Kraken REST spot symbols, Kraken spot websocket symbols, Kraken futures symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult spot websocket request handling, trackers, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Kraken spot market data, Kraken account or trading code, Kraken futures, Kraken websocket updates, Kraken Earn, Kraken error handling, or converting raw Kraken API usage to idiomatic Kraken.Net.
 ---
 
 # Kraken.Net
@@ -49,8 +49,8 @@ var socket = new KrakenSocketClient();
 
 Primary REST API surfaces:
 
-- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Trading`, `rest.SpotApi.Earn`, `rest.SpotApi.SharedClient`
-- `rest.FuturesApi.ExchangeData`, `rest.FuturesApi.Account`, `rest.FuturesApi.Trading`, `rest.FuturesApi.SharedClient`
+- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Trading`, `rest.SpotApi.Earn`, `rest.SpotApi.SharedApi`
+- `rest.FuturesApi.ExchangeData`, `rest.FuturesApi.Account`, `rest.FuturesApi.Trading`, `rest.FuturesApi.SharedApi`
 
 Primary socket API surfaces:
 
@@ -190,21 +190,24 @@ Native spot websocket order request methods, such as `socket.SpotApi.PlaceOrderA
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new KrakenRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+using var client = new KrakenRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 ```
 
-Kraken.Net exposes SharedApis from both `SpotApi.SharedClient` and `FuturesApi.SharedClient` on REST and socket clients.
+Use `IKrakenSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
 
-Do not mix Kraken-native request/model types with `SharedApis` request/model types.
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Kraken-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 
@@ -219,7 +222,7 @@ services.AddKraken(options =>
 });
 ```
 
-Inject `IKrakenRestClient` and `IKrakenSocketClient`, or the registered Kraken REST/socket client interfaces used by the target project. `AddKraken` also registers supported SharedApis interfaces from `SpotApi.SharedClient` and `FuturesApi.SharedClient`.
+Inject `IKrakenRestClient` and `IKrakenSocketClient`, or the registered Kraken REST/socket client interfaces used by the target project. `AddKraken` also registers supported SharedApis interfaces from `SpotApi.SharedApi` and `FuturesApi.SharedApi`.
 
 ## Safety Rules
 

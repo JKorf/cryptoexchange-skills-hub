@@ -13,11 +13,11 @@ var client = new CoinExRestClient();
 | `client.SpotApiV2.ExchangeData` | Spot server time, symbols, assets, tickers, order book, trade history, klines, index prices |
 | `client.SpotApiV2.Account` | Trading fees, account config, spot/margin/financial/credit/AMM balances, margin borrow/repay, borrow history/limits, deposit addresses, deposit/withdraw history, withdrawals, transfers |
 | `client.SpotApiV2.Trading` | Spot and margin orders, stop orders, batch orders, open/closed orders, edits, cancellations, client-order-id cancellations, user trades, order trades |
-| `client.SpotApiV2.SharedClient` | SharedApis REST interfaces for spot workflows |
+| `client.SpotApiV2.SharedApi` | SharedApis REST interfaces for spot workflows |
 | `client.FuturesApi.ExchangeData` | Futures symbols, tickers, order books, trades, klines, index/mark prices, funding rates, open interest, premium/index data |
 | `client.FuturesApi.Account` | Futures balances, trading fees, leverage |
 | `client.FuturesApi.Trading` | Futures orders, stop orders, cancellations, positions, position history, close position, take profit, stop loss, margin adjustment |
-| `client.FuturesApi.SharedClient` | SharedApis REST interfaces for perpetual futures workflows |
+| `client.FuturesApi.SharedApi` | SharedApis REST interfaces for perpetual futures workflows |
 
 Do not use exchange roots from other libraries such as `SpotApi`, `UsdFuturesApi`, `CoinFuturesApi`, `PerpetualFuturesApi`, `FuturesApiV2`, `SpotApiV3`, `V5Api`, `ExchangeApi`, or `UnifiedApi`.
 
@@ -30,9 +30,9 @@ var socket = new CoinExSocketClient();
 | Surface | Use for |
 | --- | --- |
 | `socket.SpotApiV2` | Spot system notices, tickers, order books, trades, index price, book price, private order/stop-order/user-trade/balance streams |
-| `socket.SpotApiV2.SharedClient` | SharedApis socket interfaces for spot workflows |
+| `socket.SpotApiV2.SharedApi` | SharedApis socket interfaces for spot workflows |
 | `socket.FuturesApi` | Futures tickers, order books, trades, index price, book price, premium index, private order/stop-order/user-trade/balance/position streams |
-| `socket.FuturesApi.SharedClient` | SharedApis socket interfaces for perpetual futures workflows |
+| `socket.FuturesApi.SharedApi` | SharedApis socket interfaces for perpetual futures workflows |
 
 Websocket subscription methods return `WebSocketResult<UpdateSubscription>`.
 
@@ -110,61 +110,34 @@ Sockets commonly use:
 
 Confirm exact overloads from the local library source or `../CoinEx.Net/Examples/ai-friendly/` before generating non-trivial code.
 
-## SharedApis Surfaces
+## Shared API V2
 
-Use `.SharedClient` when writing exchange-agnostic code:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
+
+- `restClient.SpotApiV2.SharedApi`
+- `restClient.FuturesApi.SharedApi`
+- `socketClient.SpotApiV2.SharedApi`
+- `socketClient.FuturesApi.SharedApi`
+
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
+
+The exchange aggregate is `ICoinExSharedApiClient`. It exposes:
+
+- `SpotRest` as `ICoinExRestClientSpotSharedApi`
+- `FuturesRest` as `ICoinExRestClientFuturesSharedApi`
+- `SpotSocket` as `ICoinExSocketClientSpotSharedApi`
+- `FuturesSocket` as `ICoinExSocketClientFuturesSharedApi`
+
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
 ```csharp
-var spotRest = new CoinExRestClient().SpotApiV2.SharedClient;
-var futuresRest = new CoinExRestClient().FuturesApi.SharedClient;
-var spotSocket = new CoinExSocketClient().SpotApiV2.SharedClient;
-var futuresSocket = new CoinExSocketClient().FuturesApi.SharedClient;
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
 
-Call `SharedClient.Discover()` before relying on optional shared features.
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
 
-Spot shared clients support `TradingMode.Spot`. Futures shared clients support `TradingMode.PerpetualLinear` and `TradingMode.PerpetualInverse`.
-
-Implemented spot REST shared interfaces include:
-
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotOrderRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `IFeeRestClient`
-- `ISpotOrderClientIdRestClient`
-- `ISpotTriggerOrderRestClient`
-- `IBookTickerRestClient`
-- `ITransferRestClient`
-
-Implemented futures REST shared interfaces include:
-
-- `IBalanceRestClient`
-- `IFuturesTickerRestClient`
-- `IFuturesSymbolRestClient`
-- `IFuturesOrderRestClient`
-- `IKlineRestClient`
-- `IMarkPriceKlineRestClient`
-- `IIndexPriceKlineRestClient`
-- `IRecentTradeRestClient`
-- `ILeverageRestClient`
-- `IOrderBookRestClient`
-- `IOpenInterestRestClient`
-- `IFundingRateRestClient`
-- `IPositionHistoryRestClient`
-- `IFeeRestClient`
-- `IFuturesOrderClientIdRestClient`
-- `IFuturesTriggerOrderRestClient`
-- `IFuturesTpSlRestClient`
-- `IBookTickerRestClient`
-
-Implemented spot socket shared interfaces include `ITickerSocketClient`, `ITickersSocketClient`, `ITradeSocketClient`, `IBookTickerSocketClient`, `IOrderBookSocketClient`, `IBalanceSocketClient`, `ISpotOrderSocketClient`, and `IUserTradeSocketClient`.
-
-Implemented futures socket shared interfaces include `ITickerSocketClient`, `ITickersSocketClient`, `ITradeSocketClient`, `IBookTickerSocketClient`, `IOrderBookSocketClient`, `IBalanceSocketClient`, `IFuturesOrderSocketClient`, `IUserTradeSocketClient`, and `IPositionSocketClient`.
+The library's DI registration registers `ICoinExSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.

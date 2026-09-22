@@ -200,43 +200,40 @@ if (!userSub.Success)
 await socket.UnsubscribeAsync(userSub.Data);
 ```
 
-## SharedApis REST
+## Shared API V2
 
-Use this when the user wants exchange-agnostic code. Call discovery before relying on optional features.
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
-using Coinbase.Net.Clients;
 using CryptoExchange.Net.SharedApis;
 
-var shared = new CoinbaseRestClient().AdvancedTradeApi.SharedClient;
-var info = shared.Discover();
-
-Console.WriteLine($"Shared exchange: {shared.Exchange}");
-Console.WriteLine($"Supported trading modes: {string.Join(", ", shared.SupportedTradingModes)}");
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
-```
-
-## SharedApis Websocket
-
-```csharp
-var socket = new CoinbaseSocketClient();
-ITradeSocketClient trades = socket.AdvancedTradeApi.SharedClient;
+using var client = new CoinbaseRestClient();
+IGetTickerRest ticker = client.AdvancedTradeApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USD");
 
-var sub = await trades.SubscribeToTradeUpdatesAsync(
-    new SubscribeTradeRequest(symbol),
-    update => Console.WriteLine($"[{trades.Exchange}] trades: {update.Data.Length}"));
-
-if (!sub.Success)
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
+if (!result.Success)
 {
-    Console.WriteLine($"Subscribe failed: {sub.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
-await socket.UnsubscribeAsync(sub.Data);
+Console.WriteLine(result.Data.LastPrice);
 ```
 
-Shared socket interfaces do not expose `UnsubscribeAsync`; keep the concrete socket client and call `socket.UnsubscribeAsync(sub.Data)`.
+Inject `ICoinbaseSharedApiClient` when a service needs multiple Coinbase Shared API surfaces. It exposes `AdvancedTradeRest`, `AdvancedTradeSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Error Handling And Retry
 
@@ -285,7 +282,7 @@ services.AddCoinbase(options =>
 });
 ```
 
-Inject `ICoinbaseRestClient` and `ICoinbaseSocketClient`, or follow the consuming project's existing interface pattern. `AddCoinbase` registers shared REST and socket interfaces from `AdvancedTradeApi.SharedClient`.
+Inject `ICoinbaseRestClient` and `ICoinbaseSocketClient`, or follow the consuming project's existing interface pattern. `AddCoinbase` registers shared REST and socket interfaces from `AdvancedTradeApi.SharedApi`.
 
 ## Local Examples
 
@@ -294,5 +291,4 @@ When available, read:
 - `../Coinbase.Net/Examples/ai-friendly/01-advanced-trade-market-and-account.cs`
 - `../Coinbase.Net/Examples/ai-friendly/02-advanced-trade-trading.cs`
 - `../Coinbase.Net/Examples/ai-friendly/03-websocket.cs`
-- `../Coinbase.Net/Examples/ai-friendly/04-shared-client.cs`
 - `../Coinbase.Net/Examples/ai-friendly/05-error-handling.cs`

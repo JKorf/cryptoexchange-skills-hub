@@ -137,53 +137,33 @@ The socket API also exposes private request methods that return `QueryResult<T>`
 
 Use REST methods by default unless the user specifically asks for socket request/response trading.
 
-## SharedApis Interfaces
+## Shared API V2
 
-REST shared client: `client.ExchangeApi.SharedClient`
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-Implemented REST shared interfaces:
+- `restClient.ExchangeApi.SharedApi`
+- `socketClient.ExchangeApi.SharedApi`
 
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `ISpotOrderRestClient`
-- `IFundingRateRestClient`
-- `IFuturesSymbolRestClient`
-- `IFuturesTickerRestClient`
-- `ILeverageRestClient`
-- `IOpenInterestRestClient`
-- `IFuturesOrderRestClient`
-- `IFeeRestClient`
-- `ISpotOrderClientIdRestClient`
-- `IFuturesOrderClientIdRestClient`
-- `ISpotTriggerOrderRestClient`
-- `IFuturesTriggerOrderRestClient`
-- `IFuturesTpSlRestClient`
-- `IBookTickerRestClient`
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-Socket shared client: `socket.ExchangeApi.SharedClient`
+The exchange aggregate is `ICryptoComSharedApiClient`. It exposes:
 
-Implemented socket shared interfaces:
+- `Rest` as `ICryptoComRestClientExchangeSharedApi`
+- `Socket` as `ICryptoComSocketClientExchangeSharedApi`
 
-- `ITickerSocketClient`
-- `IBookTickerSocketClient`
-- `IKlineSocketClient`
-- `IOrderBookSocketClient`
-- `ITradeSocketClient`
-- `IUserTradeSocketClient`
-- `ISpotOrderSocketClient`
-- `IFuturesOrderSocketClient`
-- `IPositionSocketClient`
-- `IBalanceSocketClient`
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
-Supported shared trading modes include `TradingMode.Spot`, `TradingMode.PerpetualLinear`, and `TradingMode.DeliveryLinear`. Call `SharedClient.Discover()` before relying on optional shared features.
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `ICryptoComSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Symbols
 

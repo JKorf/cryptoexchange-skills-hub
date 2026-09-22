@@ -16,7 +16,7 @@ var client = new BybitRestClient();
 | `client.V5Api.SubAccount` | Subaccount creation, subaccount listing, subaccount API keys, subaccount deposit addresses |
 | `client.V5Api.CryptoLoan` | Loan collateral, borrowable assets, limits, borrow, repay, open loans, completed loans, collateral adjustment |
 | `client.V5Api.Earn` | Earn product info, earn orders, order history, staked positions |
-| `client.V5Api.SharedClient` | SharedApis REST interfaces across spot and derivatives modes |
+| `client.V5Api.SharedApi` | SharedApis REST interfaces across spot and derivatives modes |
 
 Do not use exchange roots from other libraries such as `SpotApi`, `UsdFuturesApi`, `CoinFuturesApi`, `PerpetualFuturesApi`, `FuturesApiV2`, `SpotApiV3`, or `ExchangeApi`.
 
@@ -119,65 +119,36 @@ Sockets commonly use:
 
 Confirm exact overloads from the local library source or `../Bybit.Net/Examples/ai-friendly/` before generating non-trivial code.
 
-## SharedApis Surfaces
+## Shared API V2
 
-Use `.SharedClient` when writing exchange-agnostic code:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
+
+- `restClient.V5Api.SharedApi`
+- `socketClient.V5SpotApi.SharedApi`
+- `socketClient.V5LinearApi.SharedApi`
+- `socketClient.V5InverseApi.SharedApi`
+- `socketClient.V5PrivateApi.SharedApi`
+
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
+
+The exchange aggregate is `IBybitSharedApiClient`. It exposes:
+
+- `Rest` as `IBybitRestClientSharedApi`
+- `SpotSocket` as `IBybitSocketClientSpotSharedApi`
+- `LinearSocket` as `IBybitSocketClientLinearSharedApi`
+- `InverseSocket` as `IBybitSocketClientInverseSharedApi`
+- `PrivateSocket` as `IBybitSocketClientPrivateSharedApi`
+
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
 ```csharp
-var sharedRest = new BybitRestClient().V5Api.SharedClient;
-var spotSocket = new BybitSocketClient().V5SpotApi.SharedClient;
-var linearSocket = new BybitSocketClient().V5LinearApi.SharedClient;
-var inverseSocket = new BybitSocketClient().V5InverseApi.SharedClient;
-var privateSocket = new BybitSocketClient().V5PrivateApi.SharedClient;
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
 
-Call `SharedClient.Discover()` before relying on optional shared features.
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
 
-Implemented REST shared interfaces include:
-
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotOrderRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `IFuturesTickerRestClient`
-- `IFuturesSymbolRestClient`
-- `ILeverageRestClient`
-- `IMarkPriceKlineRestClient`
-- `IIndexPriceKlineRestClient`
-- `IOpenInterestRestClient`
-- `IFundingRateRestClient`
-- `IFuturesOrderRestClient`
-- `IPositionModeRestClient`
-- `IPositionHistoryRestClient`
-- `IFeeRestClient`
-- `ISpotOrderClientIdRestClient`
-- `IFuturesOrderClientIdRestClient`
-- `ISpotTriggerOrderRestClient`
-- `IFuturesTriggerOrderRestClient`
-- `IFuturesTpSlRestClient`
-- `IBookTickerRestClient`
-- `ITransferRestClient`
-
-Public spot, linear, and inverse shared socket interfaces include `ITickerSocketClient`, `ITradeSocketClient`, `IBookTickerSocketClient`, and `IKlineSocketClient`.
-
-Private shared socket interfaces include:
-
-- `IBalanceSocketClient`
-- `ISpotOrderSocketClient`
-- `IFuturesOrderSocketClient`
-- `IUserTradeSocketClient`
-- `IPositionSocketClient`
-
-Socket shared trading modes:
-
-- `V5SpotApi.SharedClient`: `TradingMode.Spot`
-- `V5LinearApi.SharedClient`: `TradingMode.DeliveryLinear`, `TradingMode.PerpetualLinear`
-- `V5InverseApi.SharedClient`: `TradingMode.DeliveryInverse`, `TradingMode.PerpetualInverse`
-- `V5PrivateApi.SharedClient`: spot, perpetual linear/inverse, and delivery linear/inverse
+The library's DI registration registers `IBybitSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.

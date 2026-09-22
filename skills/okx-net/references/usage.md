@@ -246,15 +246,18 @@ if (!order.Success)
 
 Socket order request methods return `QueryResult<T>` and are live trading requests. They use `OKXInstrument.SymbolCode` from instrument metadata, not the display symbol string.
 
-## SharedApis Spot Ticker
+## Shared API V2
+
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new OKXRestClient().UnifiedApi.SharedClient;
+using var client = new OKXRestClient();
+IGetTickerRest ticker = client.UnifiedApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USDT");
 
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
     Console.WriteLine(result.Error);
@@ -264,7 +267,19 @@ if (!result.Success)
 Console.WriteLine(result.Data.LastPrice);
 ```
 
-Use native OKX APIs for account mode, copy trading, subaccounts, detailed options data, websocket order requests, and OKX-specific algo order controls.
+Inject `IOKXSharedApiClient` when a service needs multiple OKX Shared API surfaces. It exposes `Rest`, `Socket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Dependency Injection
 

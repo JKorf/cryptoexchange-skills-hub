@@ -47,7 +47,7 @@ Use this file before generating Kucoin credential, account, transfer, withdrawal
 
 ## Unified Account
 
-- `UnifiedApi` is native KuCoin-specific. It does not expose `SharedClient`.
+- `UnifiedApi` is native KuCoin-specific. It does not expose `SharedApi`.
 - `UnifiedApi.Account.SetAccountModeAsync`, `SetLeverageAsync`, `SetCrossMarginLeverageAsync`, `TransferAsync`, and `WithdrawAsync` change live account state.
 - Unified websocket methods require the correct `UnifiedAccountType`; do not assume spot if the user asks for futures or margin.
 - Use native Unified models and request parameters, not SharedApis request models.
@@ -72,5 +72,6 @@ Use this file before generating Kucoin credential, account, transfer, withdrawal
 ## SharedApis
 
 - Use SharedApis when the user needs exchange-agnostic code.
+- Prefer narrow V2 capability interfaces and inspect their capability options before relying on optional parameters or trading modes.
 - Use native Kucoin APIs for Unified account, high-frequency spot trading, Earn, detailed margin, wallet transfer/withdrawal details, and futures account management.
 - Do not mix native Kucoin request/model types with SharedApis request/model types.

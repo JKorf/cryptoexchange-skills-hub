@@ -23,7 +23,7 @@ var client = new TapbitRestClient();
 | `client.SpotApi.ExchangeData` | Server time, symbols, books, tickers, klines, public trades, assets and networks |
 | `client.SpotApi.Account` | Spot balances |
 | `client.SpotApi.Trading` | Limit orders, batch orders, cancellation, and order queries |
-| `client.SpotApi.SharedClient` | Shared spot REST interfaces |
+| `client.SpotApi.SharedApi` | Shared spot REST interfaces |
 
 ## Exchange Data
 
@@ -79,24 +79,31 @@ var symbol = TapbitExchange.FormatSymbol(
 
 Only `TapbitEnvironment.Live` is built in. `TapbitEnvironment.CreateCustom(name, spotRestAddress)` creates a deliberate custom REST environment. There is no built-in testnet.
 
-## SharedApis
+## Shared API V2
 
-`client.SpotApi.SharedClient` implements:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `ISpotOrderRestClient`
+- `restClient.SpotApi.SharedApi`
 
-Shared spot order support is limited to `SharedOrderType.Limit` and `SharedTimeInForce.GoodTillCanceled`. Shared user-trade and order-trade methods report `Supported = false`.
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-Shared order books use `SharedQuantityType.BaseAsset`. Shared symbol retrieval populates `SpotSymbolCatalog`; fetch symbols successfully before reading the catalog.
+The exchange aggregate is `ITapbitSharedApiClient`. It exposes:
 
-Call `SharedClient.Discover()` for runtime endpoint metadata and request constraints.
+- `SpotRest` as `ITapbitRestClientSpotSharedApi`
+
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `ITapbitSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Dependency Injection And User Clients
 

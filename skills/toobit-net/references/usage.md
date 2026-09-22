@@ -201,15 +201,18 @@ var sub = await socket.SpotApi.SubscribeToUserDataUpdatesAsync(
 
 Credentialed overloads without a listen key acquire and renew the listen key automatically.
 
-## SharedApis Spot Ticker
+## Shared API V2
+
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new ToobitRestClient().SpotApi.SharedClient;
+using var client = new ToobitRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
 
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
     Console.WriteLine(result.Error);
@@ -219,7 +222,19 @@ if (!result.Success)
 Console.WriteLine(result.Data.LastPrice);
 ```
 
-Use native Toobit APIs for listen-key lifecycle, Toobit-specific futures symbols, leverage, margin type, trading stops, and detailed exchange-specific models.
+Inject `IToobitSharedApiClient` when a service needs multiple Toobit Shared API surfaces. It exposes `SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Dependency Injection
 

@@ -1,6 +1,6 @@
 ---
 name: weex-net
-description: Build C#/.NET Weex integrations with Weex.Net, including Weex.Net package setup, SpotApi, FuturesApi, REST clients, websocket subscriptions, spot and futures market data, account balances, bills, transfer/deposit/withdrawal history, spot and futures orders, conditional orders, TP/SL orders, leverage, margin mode, positions, WeexCredentials key/secret/passphrase authentication, compact Weex symbols, dependency injection, user client providers, local order books, trackers, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for Weex spot market data, Weex account or trading code, Weex futures, Weex websocket updates, Weex private streams, Weex error handling, or converting raw Weex API usage to idiomatic Weex.Net.
+description: Build C#/.NET Weex integrations with Weex.Net, including Weex.Net package setup, SpotApi, FuturesApi, REST clients, websocket subscriptions, spot and futures market data, account balances, bills, transfer/deposit/withdrawal history, spot and futures orders, conditional orders, TP/SL orders, leverage, margin mode, positions, WeexCredentials key/secret/passphrase authentication, compact Weex symbols, dependency injection, user client providers, local order books, trackers, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Weex spot market data, Weex account or trading code, Weex futures, Weex websocket updates, Weex private streams, Weex error handling, or converting raw Weex API usage to idiomatic Weex.Net.
 ---
 
 # Weex.Net
@@ -33,14 +33,14 @@ var socket = new WeexSocketClient();
 
 REST surfaces:
 
-- `rest.SpotApi.ExchangeData`, `Account`, `Trading`, `SharedClient`
-- `rest.FuturesApi.ExchangeData`, `Account`, `Trading`, `SharedClient`
+- `rest.SpotApi.ExchangeData`, `Account`, `Trading`, `SharedApi`
+- `rest.FuturesApi.ExchangeData`, `Account`, `Trading`, `SharedApi`
 
 Socket surfaces:
 
 - `socket.SpotApi`: public market streams and private account/order/trade streams
 - `socket.FuturesApi`: public market streams and private account/position/order/trade streams
-- `SharedClient` on each socket API
+- `SharedApi` on each socket API
 
 Do not use Binance `UsdFuturesApi`/`CoinFuturesApi` or OKX `UnifiedApi`. Weex uses `FuturesApi`.
 
@@ -145,17 +145,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Private subscriptions require `WeexCredentials`. Keep handlers fast and unsubscribe on shutdown.
 
-## SharedApis
+## Shared API V2
+
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new WeexRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+using var client = new WeexRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 ```
 
-Shared clients are available from both `SpotApi` and `FuturesApi` on REST and socket clients. Do not mix native and SharedApis models.
+Use `IWeexSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Weex-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

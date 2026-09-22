@@ -1,6 +1,6 @@
 ---
 name: htx-net
-description: Build C#/.NET HTX integrations with HTX.Net, including JKorf.HTX.Net package setup, SpotApi, UsdtFuturesApi, UsdtFuturesV5Api, REST clients, websocket subscriptions, socket query/order methods, spot market data, spot account ids, margin, deposits, withdrawals, transfers, USDT futures, cross and isolated margin futures, V5 futures orders, leverage, positions, trigger orders, TP/SL, HTXCredentials with HMAC or Ed25519, HTX spot symbols without separators, HTX futures contract codes with hyphens, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, ExchangeCallResult shared helper handling, trackers, and SharedApis access. Use when the user asks for HTX spot market data, HTX account or trading code, HTX futures, HTX websocket updates, HTX error handling, or converting raw HTX API usage to idiomatic HTX.Net.
+description: Build C#/.NET HTX integrations with HTX.Net, including JKorf.HTX.Net package setup, SpotApi, UsdtFuturesApi, UsdtFuturesV5Api, REST clients, websocket subscriptions, socket query/order methods, spot market data, spot account ids, margin, deposits, withdrawals, transfers, USDT futures, cross and isolated margin futures, V5 futures orders, leverage, positions, trigger orders, TP/SL, HTXCredentials with HMAC or Ed25519, HTX spot symbols without separators, HTX futures contract codes with hyphens, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, trackers, and Shared API V2 strict capabilities and aggregates. Use when the user asks for HTX spot market data, HTX account or trading code, HTX futures, HTX websocket updates, HTX error handling, or converting raw HTX API usage to idiomatic HTX.Net.
 ---
 
 # HTX.Net
@@ -48,8 +48,8 @@ var socket = new HTXSocketClient();
 
 Primary REST API surfaces:
 
-- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Margin`, `rest.SpotApi.SubAccount`, `rest.SpotApi.Trading`, `rest.SpotApi.SharedClient`
-- `rest.UsdtFuturesApi.ExchangeData`, `rest.UsdtFuturesApi.Account`, `rest.UsdtFuturesApi.SubAccount`, `rest.UsdtFuturesApi.Trading`, `rest.UsdtFuturesApi.SharedClient`
+- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Margin`, `rest.SpotApi.SubAccount`, `rest.SpotApi.Trading`, `rest.SpotApi.SharedApi`
+- `rest.UsdtFuturesApi.ExchangeData`, `rest.UsdtFuturesApi.Account`, `rest.UsdtFuturesApi.SubAccount`, `rest.UsdtFuturesApi.Trading`, `rest.UsdtFuturesApi.SharedApi`
 - `rest.UsdtFuturesV5Api.ExchangeData`, `rest.UsdtFuturesV5Api.Account`, `rest.UsdtFuturesV5Api.Trading`
 
 Primary socket API surfaces:
@@ -197,21 +197,24 @@ Native spot socket query/order methods, such as `socket.SpotApi.GetKlinesAsync(.
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new HTXRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+using var client = new HTXRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 ```
 
-HTX.Net exposes SharedApis from `SpotApi.SharedClient` and `UsdtFuturesApi.SharedClient` on REST and socket clients. `UsdtFuturesV5Api` is a native HTX surface and is not the SharedApis futures root.
+Use `IHTXSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `UsdtFuturesRest`, `SpotSocket`, `UsdtFuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
 
-Do not mix HTX-native request/model types with `SharedApis` request/model types.
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix HTX-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 
@@ -224,7 +227,7 @@ services.AddHTX(options =>
 });
 ```
 
-Inject `IHTXRestClient` and `IHTXSocketClient`, or the registered HTX REST/socket client interfaces used by the target project. `AddHTX` also registers supported SharedApis interfaces from `SpotApi.SharedClient` and `UsdtFuturesApi.SharedClient`.
+Inject `IHTXRestClient` and `IHTXSocketClient`, or the registered HTX REST/socket client interfaces used by the target project. `AddHTX` also registers supported SharedApis interfaces from `SpotApi.SharedApi` and `UsdtFuturesApi.SharedApi`.
 
 ## Safety Rules
 

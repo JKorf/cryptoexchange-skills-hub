@@ -1,6 +1,6 @@
 ---
 name: bingx-net
-description: Build C#/.NET BingX integrations with BingX.Net, including Spot, PerpetualFutures, REST clients, websocket subscriptions, account reads, order placement/cancellation, BingXCredentials, BingX hyphenated symbols, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, and SharedApis access. Use when the user asks for BingX market data, BingX account or trading code, BingX perpetual futures, BingX websocket updates, BingX error handling, or converting raw BingX API usage to idiomatic BingX.Net.
+description: Build C#/.NET BingX integrations with BingX.Net, including Spot, PerpetualFutures, REST clients, websocket subscriptions, account reads, order placement/cancellation, BingXCredentials, BingX hyphenated symbols, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for BingX market data, BingX account or trading code, BingX perpetual futures, BingX websocket updates, BingX error handling, or converting raw BingX API usage to idiomatic BingX.Net.
 ---
 
 # BingX.Net
@@ -166,19 +166,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new BingXRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+using var client = new BingXRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-Do not mix BingX-native request/model types with `SharedApis` request/model types.
+Use `IBingXSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `PerpetualFuturesRest`, `SpotSocket`, `PerpetualFuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix BingX-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

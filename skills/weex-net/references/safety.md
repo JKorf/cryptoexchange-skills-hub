@@ -44,7 +44,7 @@ Use this file before generating credentials, account, trading, futures, leverage
 - Keep handlers fast and avoid logging sensitive account details.
 - Check subscription success and unsubscribe on shutdown.
 
-## Environment And SharedApis
+## Environment And Shared API V2
 
 - Current source exposes `WeexEnvironment.Live` and custom environments, not a built-in testnet.
 - Use SharedApis for portable workflows and native APIs for Weex-specific account, conditional-order, TP/SL, and configuration features.

@@ -3,6 +3,7 @@
 ## Package And Aggregate Types
 
 - Package: `CryptoClients.Net`
+- Shared API V2 aggregate: `ExchangeSharedApiClient`, `IExchangeSharedApiClient`
 - REST: `ExchangeRestClient`, `IExchangeRestClient`
 - Socket: `ExchangeSocketClient`, `IExchangeSocketClient`
 - DI: `services.AddCryptoClients(...)`
@@ -12,38 +13,54 @@
 
 The package currently targets .NET 8, 9, 10, .NET Standard 2.0, and .NET Standard 2.1.
 
-## Shared REST Aggregation
+## Shared API V2 Aggregation
 
-Most aggregate operation families provide three shapes:
+`IExchangeSharedApiClient` is the V2 entry point. It exposes:
 
-- one exchange: method accepting `string exchange`, returning `HttpResult<T>`
-- selected/all supported exchanges: method accepting `IEnumerable<string>? exchanges`, returning `HttpResult<T>[]`
-- response-as-completed processing: `...AsyncEnumerable(...)`, returning `IAsyncEnumerable<HttpResult<T>>`
+- Typed exchange aggregates such as `Binance`, `Kraken`, and `OKX`.
+- `GetClient(exchange)` for a dynamically selected exchange aggregate.
+- `GetCapability` for one preferred capability on one exchange.
+- `GetCapabilities` for one preferred matching implementation per exchange.
+- `GetImplementations` for every matching transport or API surface, including multiple matches from one exchange.
 
-Families include spot/futures tickers and symbols, book tickers, order books, klines, recent trades, trade history, assets, balances, deposits, withdrawals, fees, funding rates, open interest, leverage, position mode/history, spot/futures orders, trigger orders, TP/SL, transfers, and listen keys where supported.
+Pass a typed descriptor such as `SharedCapabilities.Tickers.GetTicker.Rest` or `SharedCapabilities.Tickers.SubscribeTicker`. Descriptors let the compiler infer the strict capability interface; they are not implementations and do not guarantee support.
 
-The request's `TradingMode` disambiguates exchanges that expose multiple APIs. A one-exchange call can fail when multiple matching APIs exist and no mode is specified.
+Specify `TradingMode` when an exchange exposes more than one relevant market. Use a transport-specific descriptor or `SharedTransport` when REST versus WebSocket behavior matters.
 
-## Shared Socket Aggregation
+## Executing Resolved Capabilities
 
-Aggregate subscriptions include ticker/all-ticker, book ticker, order book, trade, kline, balance, spot order, futures order, position, and user-trade updates.
+Capability lookup is synchronous and does not send an exchange request. Execute the returned `Capability` explicitly:
 
-One-exchange methods return `WebSocketResult<UpdateSubscription>`. Multi-exchange methods return arrays. Handlers receive `DataEvent<T>` with `Exchange` populated.
+```csharp
+var matches = shared.GetCapabilities(
+    SharedCapabilities.Tickers.GetTicker.Rest,
+    TradingMode.Spot,
+    exchanges);
 
-Use `UnsubscribeAllAsync()` for aggregate teardown.
+var tasks = matches.Select(async match =>
+    (Match: match,
+     Result: await match.Capability.GetTickerAsync(request)));
 
-## Capability Discovery
+await foreach (var item in tasks.ParallelEnumerateAsync())
+{
+    // Keep item.Match with item.Result for exchange and transport metadata.
+}
+```
 
-Each operation family exposes getters for supported shared clients, for example:
+Use `Task.WhenAll` when all results are needed before processing. Use `ParallelEnumerateAsync` when results should be handled as they complete.
 
-- `GetSpotTickerClient(exchange)` / `GetSpotTickerClients()`
-- `GetFuturesTickerClient(mode, exchange)` / `GetFuturesTickerClients(mode)`
-- `GetOrderBookClient(mode, exchange)` / `GetOrderBookClients(mode)`
-- `GetSpotOrderClient(exchange)`
-- `GetFuturesOrderClient(mode, exchange)`
-- socket equivalents such as `GetTickerClient(mode, exchange)`
+## Strict Capability Families
 
-Single-client getters are nullable. `GetExchangeSharedClients(exchange, tradingMode)` returns every registered `ISharedClient` matching that exchange and optional mode.
+V2 uses one interface per operation. Representative families include:
+
+- Tickers: `IGetTickerRest`, `IGetAllTickersRest`, `ISubscribeTickerSocket`
+- Symbols: `IGetSpotSymbolsRest`, `IGetFuturesSymbolsRest`
+- Market data: order books, book tickers, trades, klines, funding rates, and open interest
+- Account and funding: balances, assets, fees, deposits, withdrawals, and transfers
+- Trading: separate place, get, cancel, history, and trade capabilities for spot and futures
+- Subscriptions: ticker, trades, klines, order book, balances, orders, positions, and user trades
+
+Inspect the capability's options for supported trading modes, request parameter rules, exchange parameter rules, and operation-specific metadata.
 
 ## Asset Classification And Symbol Catalogs
 
@@ -63,8 +80,8 @@ Use `Unspecified` when the exchange or client cannot classify an asset. Valid su
 
 For cached lookup, retrieve a concrete symbol client:
 
-- `GetSpotSymbolClient(exchange)` returns nullable `ISpotSymbolRestClient`; after a successful `GetSpotSymbolsAsync(...)`, read `SpotSymbolCatalog`.
-- `GetFuturesSymbolClient(tradingMode, exchange)` returns nullable `IFuturesSymbolRestClient`; after a successful `GetFuturesSymbolsAsync(...)`, read `FuturesSymbolCatalog`.
+- `IGetSpotSymbolsRest`; after a successful `GetSpotSymbolsAsync(...)`, read `SpotSymbolCatalog`.
+- `IGetFuturesSymbolsRest`; after a successful `GetFuturesSymbolsAsync(...)`, read `FuturesSymbolCatalog`.
 
 Both properties are nullable `SharedSymbolCatalog` instances and are maintained separately. `SharedSymbolCatalog.Exchange` identifies the exchange, `Assets` is keyed by asset name and contains `SharedAssetInfo` (`Name`, `Type`, `SubType`), and `Symbols` is keyed by the exchange symbol name. Do not read either catalog before its corresponding symbol fetch.
 
@@ -74,7 +91,7 @@ Both properties are nullable `SharedSymbolCatalog` instances and are maintained 
 
 `ExchangeSocketClient` exposes the same socket-capable native clients except CoinGecko.
 
-CoinGecko and Polymarket direct properties exist, but current aggregate SharedApis initialization does not add them to `_sharedClients`.
+CoinGecko and Polymarket direct properties exist, but they are not currently exposed by `IExchangeSharedApiClient`.
 
 ## Credentials And Options
 
@@ -88,14 +105,16 @@ Set credentials on aggregate REST/socket clients through `SetApiCredentials(Exch
 
 ## DI And Factories
 
-`AddCryptoClients(...)` registers all bundled native clients and aggregate interfaces. It accepts global options, per-exchange library option delegates, optional socket-client lifetime, or an `IConfiguration` section.
+`AddCryptoClients(...)` registers `IExchangeSharedApiClient`, all bundled exchange Shared API aggregates, strict capabilities, native clients, and supporting aggregate interfaces. It accepts global options, per-exchange library option delegates, optional socket-client lifetime, or an `IConfiguration` section.
 
 `IExchangeOrderBookFactory` creates one/many local books and `ICrossExchangeBook` instances. `IExchangeTrackerFactory` creates kline, trade, and user-data trackers; use `CanCreateKlineTracker(...)` and `CanCreateTradeTracker(...)` for dynamic capability checks. `IExchangeUserClientProvider` caches aggregate REST/socket clients by user identifier.
 
 ## Result Types
 
-- REST: `HttpResult<T>` and arrays of `HttpResult<T>`
-- Socket: `WebSocketResult<UpdateSubscription>` and arrays thereof
-- Symbol/capability helpers: `ExchangeCallResult<T>`
+- REST capabilities: `HttpResult<T>`
+- Websocket request capabilities: `QueryResult<T>`
+- Websocket subscriptions: `WebSocketResult<UpdateSubscription>`
+- Transport-independent capabilities: `IExchangeCallResult<T>`
+- Lookup: `SharedCapabilityResolution<T>`
 
-Always check each result's `Success`, `Exchange`, and `Error` independently.
+Retain each `SharedCapabilityResolution<T>` alongside its result. Check `Success` and `Error` independently, and use the resolution's `Exchange` and `Transport` metadata for attribution.

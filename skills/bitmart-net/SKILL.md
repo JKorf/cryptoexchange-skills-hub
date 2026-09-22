@@ -1,6 +1,6 @@
 ---
 name: bitmart-net
-description: Build C#/.NET BitMart integrations with BitMart.Net, including SpotApi, UsdFuturesApi, REST clients, websocket subscriptions, spot and USD futures account reads, order placement/cancellation, spot margin, sub-accounts, BitMartCredentials with memo/passphrase, BitMart spot and futures symbol formats, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult helper handling, and SharedApis access. Use when the user asks for BitMart market data, BitMart account or trading code, BitMart USD futures, BitMart spot margin, BitMart websocket updates, BitMart error handling, or converting raw BitMart API usage to idiomatic BitMart.Net.
+description: Build C#/.NET BitMart integrations with BitMart.Net, including SpotApi, UsdFuturesApi, REST clients, websocket subscriptions, spot and USD futures account reads, order placement/cancellation, spot margin, sub-accounts, BitMartCredentials with memo/passphrase, BitMart spot and futures symbol formats, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for BitMart market data, BitMart account or trading code, BitMart USD futures, BitMart spot margin, BitMart websocket updates, BitMart error handling, or converting raw BitMart API usage to idiomatic BitMart.Net.
 ---
 
 # BitMart.Net
@@ -176,19 +176,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new BitMartRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+using var client = new BitMartRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-BitMart exposes shared clients on both `SpotApi` and `UsdFuturesApi`. Call `SharedClient.Discover()` before routing optional shared features. Do not mix BitMart-native request/model types with `SharedApis` request/model types.
+Use `IBitMartSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `UsdFuturesRest`, `SpotSocket`, `UsdFuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix BitMart-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

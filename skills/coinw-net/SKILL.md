@@ -1,6 +1,6 @@
 ---
 name: coinw-net
-description: Build C#/.NET CoinW integrations with CoinW.Net, including SpotApi and FuturesApi REST clients, spot and futures websocket subscriptions, spot account balances, deposits, withdrawals, transfers, order placement/cancellation, futures margin mode, leverage, positions, take-profit/stop-loss, CoinWCredentials, CoinW spot underscore symbols, CoinW futures instrument symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, CallResult batch-item handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for CoinW spot market data, CoinW account or trading code, CoinW futures, CoinW websocket updates, CoinW error handling, or converting raw CoinW API usage to idiomatic CoinW.Net.
+description: Build C#/.NET CoinW integrations with CoinW.Net, including SpotApi and FuturesApi REST clients, spot and futures websocket subscriptions, spot account balances, deposits, withdrawals, transfers, order placement/cancellation, futures margin mode, leverage, positions, take-profit/stop-loss, CoinWCredentials, CoinW spot underscore symbols, CoinW futures instrument symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, CallResult batch-item handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for CoinW spot market data, CoinW account or trading code, CoinW futures, CoinW websocket updates, CoinW error handling, or converting raw CoinW API usage to idiomatic CoinW.Net.
 ---
 
 # CoinW.Net
@@ -170,19 +170,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new CoinWRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+using var client = new CoinWRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-Do not mix CoinW-native request/model types with `SharedApis` request/model types.
+Use `ICoinWSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix CoinW-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

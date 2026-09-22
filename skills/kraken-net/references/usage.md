@@ -201,15 +201,18 @@ if (!strategies.Success)
 
 Generate `AllocateEarnFundsAsync` or `DeallocateEarnFundsAsync` only when explicitly requested.
 
-## SharedApis Spot Ticker
+## Shared API V2
+
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new KrakenRestClient().SpotApi.SharedClient;
+using var client = new KrakenRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USDT");
 
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
     Console.WriteLine(result.Error);
@@ -219,7 +222,19 @@ if (!result.Success)
 Console.WriteLine(result.Data.LastPrice);
 ```
 
-Use native Kraken APIs for Kraken-specific Earn, wallet transfer, 2FA, websocket v2 order, and futures-specific details.
+Inject `IKrakenSharedApiClient` when a service needs multiple Kraken Shared API surfaces. It exposes `SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Dependency Injection
 

@@ -21,9 +21,9 @@ REST groups:
 - `V4Api.SubAccount`
 - `V4Api.Convert`
 - `V4Api.Codes`
-- `V4Api.SharedClient`
+- `V4Api.SharedApi`
 
-Socket surface: `socket.V4Api` and `socket.V4Api.SharedClient`.
+Socket surface: `socket.V4Api` and `socket.V4Api.SharedApi`.
 
 ## Exchange Data
 
@@ -78,13 +78,33 @@ Subscriptions return `WebSocketResult<UpdateSubscription>` and include:
 - private spot/margin balances, open/closed orders, user trades
 - positions, borrow updates, and margin-position events
 
-## SharedApis
+## Shared API V2
 
-REST supports spot symbols/tickers/orders/trigger orders, futures symbols/tickers/orders/trigger orders/TP-SL, balances, assets, deposits, withdrawals, transfers, fees, order books, trades, book tickers, funding rates, leverage, open interest, and position history.
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-Socket supports balance, book ticker, kline, ticker, trade, user trade, spot order, futures order, and position interfaces.
+- `restClient.V4Api.SharedApi`
+- `socketClient.V4Api.SharedApi`
 
-Use `SharedClient.Discover()` for runtime capability metadata.
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
+
+The exchange aggregate is `IWhiteBitSharedApiClient`. It exposes:
+
+- `V4Rest` as `IWhiteBitRestClientV4SharedApi`
+- `V4Socket` as `IWhiteBitSocketClientV4SharedApi`
+
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `IWhiteBitSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Symbols And Environment
 

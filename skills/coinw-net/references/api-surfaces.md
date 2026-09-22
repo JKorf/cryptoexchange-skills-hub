@@ -147,64 +147,37 @@ Private spot streams require credentials on the socket client.
 
 Private futures streams require credentials on the socket client.
 
-## SharedApis Interfaces
+## Shared API V2
 
-Spot REST shared client: `client.SpotApi.SharedClient`
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-Implemented spot REST interfaces:
+- `restClient.SpotApi.SharedApi`
+- `restClient.FuturesApi.SharedApi`
+- `socketClient.SpotApi.SharedApi`
+- `socketClient.FuturesApi.SharedApi`
 
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `ISpotTickerRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotOrderRestClient`
-- `ITransferRestClient`
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-Spot socket shared client: `socket.SpotApi.SharedClient`
+The exchange aggregate is `ICoinWSharedApiClient`. It exposes:
 
-Implemented spot socket interfaces:
+- `SpotRest` as `ICoinWRestClientSpotSharedApi`
+- `FuturesRest` as `ICoinWRestClientFuturesSharedApi`
+- `SpotSocket` as `ICoinWSocketClientSpotSharedApi`
+- `FuturesSocket` as `ICoinWSocketClientFuturesSharedApi`
 
-- `IBalanceSocketClient`
-- `IKlineSocketClient`
-- `IOrderBookSocketClient`
-- `ITickerSocketClient`
-- `ITickersSocketClient`
-- `ITradeSocketClient`
-- `ISpotOrderSocketClient`
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
-Futures REST shared client: `client.FuturesApi.SharedClient`
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
 
-Implemented futures REST interfaces:
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
 
-- `IFeeRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `IFuturesSymbolRestClient`
-- `IFuturesTickerRestClient`
-- `IFuturesOrderRestClient`
-- `IFuturesTpSlRestClient`
-- `IBalanceRestClient`
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
 
-Futures socket shared client: `socket.FuturesApi.SharedClient`
-
-Implemented futures socket interfaces:
-
-- `IBalanceSocketClient`
-- `IKlineSocketClient`
-- `IOrderBookSocketClient`
-- `ITickerSocketClient`
-- `ITradeSocketClient`
-- `IFuturesOrderSocketClient`
-- `IPositionSocketClient`
-
-Call `SharedClient.Discover()` before relying on optional shared features.
+The library's DI registration registers `ICoinWSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Symbols
 

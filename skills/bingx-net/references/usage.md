@@ -223,46 +223,40 @@ var markPrice = await socket.PerpetualFuturesApi.SubscribeToMarkPriceUpdatesAsyn
 
 Confirm exact overloads in the target package before using less common streams.
 
-## SharedApis REST
+## Shared API V2
 
-Use this when the user wants exchange-agnostic code.
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
-using BingX.Net.Clients;
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new BingXRestClient().SpotApi.SharedClient;
+using var client = new BingXRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
 
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
-    Console.WriteLine($"[{tickers.Exchange}] Failed: {result.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
-Console.WriteLine($"[{tickers.Exchange}] {result.Data.Symbol}: {result.Data.LastPrice}");
+Console.WriteLine(result.Data.LastPrice);
 ```
 
-## SharedApis Websocket
+Inject `IBingXSharedApiClient` when a service needs multiple BingX Shared API surfaces. It exposes `SpotRest`, `PerpetualFuturesRest`, `SpotSocket`, `PerpetualFuturesSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
 
 ```csharp
-var socket = new BingXSocketClient();
-ITickerSocketClient tickers = socket.SpotApi.SharedClient;
-var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
 
-var sub = await tickers.SubscribeToTickerUpdatesAsync(
-    new SubscribeTickerRequest(symbol),
-    update => Console.WriteLine($"[{tickers.Exchange}] {update.Data.Symbol}: {update.Data.LastPrice}"));
-
-if (!sub.Success)
-{
-    Console.WriteLine($"Subscribe failed: {sub.Error}");
+if (match is null)
     return;
-}
 
-await socket.UnsubscribeAsync(sub.Data);
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Error Handling And Retry
 

@@ -76,26 +76,45 @@ Sockets commonly use:
 
 Confirm exact overloads from the local library source or `../Aster.Net/Examples/ai-friendly/` before generating non-trivial code.
 
-## SharedApis Surfaces
+## Shared API V2
 
-Use `.SharedClient` when writing exchange-agnostic code:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
+
+- `restClient.SpotApi.SharedApi`
+- `restClient.FuturesApi.SharedApi`
+- `socketClient.SpotApi.SharedApi`
+- `socketClient.FuturesApi.SharedApi`
+- `restClient.SpotV3Api.SharedApi`
+- `restClient.FuturesV3Api.SharedApi`
+- `socketClient.SpotV3Api.SharedApi`
+- `socketClient.FuturesV3Api.SharedApi`
+
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
+
+The exchange aggregate is `IAsterSharedApiClient`. It exposes:
+
+- `SpotRest` as `IAsterRestClientSpotSharedApi`
+- `FuturesRest` as `IAsterRestClientFuturesSharedApi`
+- `SpotV3Rest` as `IAsterRestClientSpotV3SharedApi`
+- `FuturesV3Rest` as `IAsterRestClientFuturesV3SharedApi`
+- `SpotSocket` as `IAsterSocketClientSpotSharedApi`
+- `FuturesSocket` as `IAsterSocketClientFuturesSharedApi`
+- `SpotV3Socket` as `IAsterSocketClientSpotV3SharedApi`
+- `FuturesV3Socket` as `IAsterSocketClientFuturesV3SharedApi`
+
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
 ```csharp
-var spotShared = new AsterRestClient().SpotV3Api.SharedClient;
-var futuresShared = new AsterRestClient().FuturesV3Api.SharedClient;
-var spotSocketShared = new AsterSocketClient().SpotV3Api.SharedClient;
-var futuresSocketShared = new AsterSocketClient().FuturesV3Api.SharedClient;
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
 
-Common shared interfaces include:
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
 
-- `ISpotTickerRestClient`
-- `ISpotOrderRestClient`
-- `IBalanceRestClient`
-- `IFuturesOrderRestClient`
-- `IPositionRestClient`
-- `ITickerSocketClient`
-- `IOrderBookSocketClient`
+The library's DI registration registers `IAsterSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Futures V3 Strategy Orders
 

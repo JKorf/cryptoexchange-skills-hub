@@ -62,7 +62,7 @@ Use this file before generating Kraken credential, account, transfer, withdrawal
 - Private futures streams require futures credentials.
 - For long-running user data services, consider `IKrakenTrackerFactory` instead of ad hoc subscription management.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis when the user needs exchange-agnostic code.
 - Use native Kraken APIs for Earn, wallet transfer, 2FA-specific parameters, Kraken websocket v2 order requests, and detailed futures features.

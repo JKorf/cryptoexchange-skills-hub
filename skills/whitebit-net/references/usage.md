@@ -130,15 +130,40 @@ if (!result.Success)
 
 Socket requests return `QueryResult<T>`; subscriptions return `WebSocketResult<UpdateSubscription>`.
 
-## SharedApis
+## Shared API V2
+
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new WhiteBitRestClient().V4Api.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+using var client = new WhiteBitRestClient();
+IGetTickerRest ticker = client.V4Api.SharedApi;
+var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USDT");
+
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
+if (!result.Success)
+{
+    Console.WriteLine(result.Error);
+    return;
+}
+
+Console.WriteLine(result.Data.LastPrice);
 ```
+
+Inject `IWhiteBitSharedApiClient` when a service needs multiple WhiteBit Shared API surfaces. It exposes `V4Rest`, `V4Socket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Dependency Injection
 

@@ -1,6 +1,6 @@
 ---
 name: coinex-net
-description: Build C#/.NET CoinEx integrations with CoinEx.Net, including SpotApiV2 and FuturesApi REST clients, spot and futures websocket subscriptions, spot/margin/futures market data, account balances, deposits, withdrawals, transfers, margin borrow/repay, order placement/cancellation, stop orders, futures positions, leverage, take-profit/stop-loss, CoinExCredentials, CoinEx compact symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, CallResult batch-item handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for CoinEx spot market data, CoinEx account or trading code, CoinEx futures, CoinEx websocket updates, CoinEx error handling, or converting raw CoinEx API usage to idiomatic CoinEx.Net.
+description: Build C#/.NET CoinEx integrations with CoinEx.Net, including SpotApiV2 and FuturesApi REST clients, spot and futures websocket subscriptions, spot/margin/futures market data, account balances, deposits, withdrawals, transfers, margin borrow/repay, order placement/cancellation, stop orders, futures positions, leverage, take-profit/stop-loss, CoinExCredentials, CoinEx compact symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, CallResult batch-item handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for CoinEx spot market data, CoinEx account or trading code, CoinEx futures, CoinEx websocket updates, CoinEx error handling, or converting raw CoinEx API usage to idiomatic CoinEx.Net.
 ---
 
 # CoinEx.Net
@@ -51,11 +51,11 @@ Current source-checked API surfaces:
 - `rest.SpotApiV2.ExchangeData`: spot server time, symbols, assets, tickers, order books, trades, klines, and index prices
 - `rest.SpotApiV2.Account`: spot, margin, financial, credit, and AMM balances; fees; account config; margin borrow/repay; deposits; withdrawals; transfers
 - `rest.SpotApiV2.Trading`: spot/margin orders, stop orders, batch orders, edits, cancellations, open/closed orders, user trades, and order trades
-- `rest.SpotApiV2.SharedClient`: exchange-agnostic SharedApis REST interfaces for spot workflows
+- `rest.SpotApiV2.SharedApi`: exchange-agnostic SharedApis REST interfaces for spot workflows
 - `rest.FuturesApi.ExchangeData`: futures symbols, tickers, order books, trades, klines, index/mark prices, funding rates, open interest, and related market data
 - `rest.FuturesApi.Account`: futures balances, trading fees, and leverage
 - `rest.FuturesApi.Trading`: futures orders, stop orders, cancellations, positions, position history, close-position, TP/SL, and margin adjustment
-- `rest.FuturesApi.SharedClient`: exchange-agnostic SharedApis REST interfaces for perpetual futures workflows
+- `rest.FuturesApi.SharedApi`: exchange-agnostic SharedApis REST interfaces for perpetual futures workflows
 - `socket.SpotApiV2`: spot public streams plus private spot order, stop-order, trade, and balance streams
 - `socket.FuturesApi`: futures public streams plus private futures order, stop-order, trade, balance, and position streams
 
@@ -165,19 +165,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-var shared = new CoinExRestClient().SpotApiV2.SharedClient;
-var info = shared.Discover();
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
+using var client = new CoinExRestClient();
+IGetTickerRest ticker = client.SpotApiV2.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-CoinEx exposes shared clients on `SpotApiV2.SharedClient` and `FuturesApi.SharedClient`. Spot shared clients support `TradingMode.Spot`; futures shared clients support `TradingMode.PerpetualLinear` and `TradingMode.PerpetualInverse`. Call `Discover()` before routing optional shared features. Do not mix CoinEx-native request/model types with `SharedApis` request/model types.
+Use `ICoinExSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix CoinEx-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

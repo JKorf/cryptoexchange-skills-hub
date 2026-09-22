@@ -1,6 +1,6 @@
 ---
 name: whitebit-net
-description: Build C#/.NET WhiteBit integrations with WhiteBit.Net, including WhiteBit.Net package setup, V4Api, REST clients, websocket subscriptions and request/response methods, spot and collateral/perpetual market data, balances, deposits, withdrawals, transfers, subaccounts, convert, codes, spot orders, collateral orders, OCO/conditional/OTO orders, leverage, hedge mode, positions, WhiteBitCredentials authentication, WhiteBit underscore and perpetual symbols, dependency injection, user client providers, local order books, trackers, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for WhiteBit market data, WhiteBit account or trading code, WhiteBit collateral/futures, WhiteBit websocket updates or requests, WhiteBit private streams, WhiteBit error handling, or converting raw WhiteBit API usage to idiomatic WhiteBit.Net.
+description: Build C#/.NET WhiteBit integrations with WhiteBit.Net, including WhiteBit.Net package setup, V4Api, REST clients, websocket subscriptions and request/response methods, spot and collateral/perpetual market data, balances, deposits, withdrawals, transfers, subaccounts, convert, codes, spot orders, collateral orders, OCO/conditional/OTO orders, leverage, hedge mode, positions, WhiteBitCredentials authentication, WhiteBit underscore and perpetual symbols, dependency injection, user client providers, local order books, trackers, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for WhiteBit market data, WhiteBit account or trading code, WhiteBit collateral/futures, WhiteBit websocket updates or requests, WhiteBit private streams, WhiteBit error handling, or converting raw WhiteBit API usage to idiomatic WhiteBit.Net.
 ---
 
 # WhiteBit.Net
@@ -37,9 +37,9 @@ WhiteBit uses one `V4Api` root:
 - `rest.V4Api.Account`
 - `rest.V4Api.Trading`: spot orders and general order history
 - `rest.V4Api.CollateralTrading`: perpetual/collateral and margin orders/positions
-- `rest.V4Api.SubAccount`, `Convert`, `Codes`, `SharedClient`
+- `rest.V4Api.SubAccount`, `Convert`, `Codes`, `SharedApi`
 - `socket.V4Api`: public/private subscriptions and socket request/response methods
-- `socket.V4Api.SharedClient`
+- `socket.V4Api.SharedApi`
 
 Do not invent `SpotApi`, `FuturesApi`, or `UnifiedApi` roots.
 
@@ -137,17 +137,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Socket requests such as `GetTickerAsync`, `GetOrderBookAsync`, and private balance/order queries return `QueryResult<T>`, not subscription results.
 
-## SharedApis
+## Shared API V2
+
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new WhiteBitRestClient().V4Api.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+using var client = new WhiteBitRestClient();
+IGetTickerRest ticker = client.V4Api.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 ```
 
-WhiteBit exposes spot and futures SharedApis from the same `V4Api.SharedClient`. Do not mix native and shared models.
+Use `IWhiteBitSharedApiClient` as the exchange aggregate. Its aggregate properties—`V4Rest`, `V4Socket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix WhiteBit-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

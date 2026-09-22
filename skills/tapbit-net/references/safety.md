@@ -52,7 +52,7 @@ Read this file before generating Tapbit credentials, account, order, batch, user
 - Keep polling intervals bounded and respect rate limits.
 - Validate user identifiers and never place secrets in them or in logs.
 
-## SharedApis
+## Shared API V2
 
 - Use native methods for Tapbit-specific fields and batch operations.
 - Use SharedApis for portable spot workflows.

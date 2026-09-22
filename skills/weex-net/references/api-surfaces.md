@@ -19,7 +19,7 @@ Use this file to select Weex client roots, endpoint groups, streams, SharedApis,
 - `socket.SpotApi`
 - `socket.FuturesApi`
 
-Each API exposes `SharedClient`.
+Each API exposes `SharedApi`.
 
 ## Spot REST
 
@@ -100,19 +100,37 @@ Futures private:
 
 All subscription methods return `WebSocketResult<UpdateSubscription>`.
 
-## SharedApis
+## Shared API V2
 
-Spot REST implements assets, balance, book ticker, deposit, fee, kline, order book, recent trade, withdrawal, spot symbol/ticker/order, and client-order-id interfaces.
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-Deposit and withdrawal SharedApis provide history views based on account bills. Deposit address retrieval is unavailable, and the current native surface does not initiate deposits, withdrawals, or transfers.
+- `restClient.SpotApi.SharedApi`
+- `restClient.FuturesApi.SharedApi`
+- `socketClient.SpotApi.SharedApi`
+- `socketClient.FuturesApi.SharedApi`
 
-Futures REST implements balance, book ticker, fee, kline, order book, recent trade, funding rate, futures symbol/ticker/order/trigger order, index/mark kline, leverage, and open-interest interfaces.
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-Spot socket implements balance, book ticker, kline, ticker, trade, user trade, and spot-order interfaces.
+The exchange aggregate is `IWeexSharedApiClient`. It exposes:
 
-Futures socket implements balance, kline, ticker, trade, user trade, futures-order, and position interfaces.
+- `SpotRest` as `IWeexRestClientSpotSharedApi`
+- `FuturesRest` as `IWeexRestClientFuturesSharedApi`
+- `SpotSocket` as `IWeexSocketClientSpotSharedApi`
+- `FuturesSocket` as `IWeexSocketClientFuturesSharedApi`
 
-Use `SharedClient.Discover()` for capability metadata.
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `IWeexSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Environment And Symbols
 

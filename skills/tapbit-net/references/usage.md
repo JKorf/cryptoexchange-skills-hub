@@ -145,45 +145,40 @@ foreach (var item in batch.Data)
 
 A failed item does not roll back successful siblings. Record successful IDs and reconcile before cancellation or retry.
 
-## SharedApis Ticker
+## Shared API V2
+
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers =
-    new TapbitRestClient().SpotApi.SharedClient;
+using var client = new TapbitRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
 
-var request = new GetTickerRequest(
-    new SharedSymbol(TradingMode.Spot, "BTC", "USDT"));
-
-var result = await tickers.GetSpotTickerAsync(request);
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
-    Console.WriteLine($"[{tickers.Exchange}] {result.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
 Console.WriteLine(result.Data.LastPrice);
 ```
 
-## Shared Symbol Catalog
+Inject `ITapbitSharedApiClient` when a service needs multiple Tapbit Shared API surfaces. It exposes `SpotRest`. When the operation or transport is selected dynamically, use a typed capability descriptor:
 
 ```csharp
-ISpotSymbolRestClient symbols =
-    new TapbitRestClient().SpotApi.SharedClient;
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
 
-var fetch = await symbols.GetSpotSymbolsAsync(new GetSymbolsRequest());
-if (!fetch.Success)
-{
-    Console.WriteLine(fetch.Error);
+if (match is null)
     return;
-}
 
-var catalog = symbols.SpotSymbolCatalog;
-Console.WriteLine(catalog?.Symbols.Count ?? 0);
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
 
-Fetch successfully before reading `SpotSymbolCatalog`.
+Tapbit currently exposes no Shared API V2 socket surface. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Dependency Injection
 

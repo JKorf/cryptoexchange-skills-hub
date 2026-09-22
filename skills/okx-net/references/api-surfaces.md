@@ -194,64 +194,33 @@ Do not use exchange roots such as `SpotApi`, `UsdFuturesApi`, `CoinFuturesApi`, 
 
 Socket order requests are live trading requests. They use numeric `OKXInstrument.SymbolCode` values, not display symbol strings such as `ETH-USDT`. Retrieve symbol codes with `client.UnifiedApi.ExchangeData.GetSymbolsAsync(...)`.
 
-## SharedApis Interfaces
+## Shared API V2
 
-REST shared client:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-- `client.UnifiedApi.SharedClient`
+- `restClient.UnifiedApi.SharedApi`
+- `socketClient.UnifiedApi.SharedApi`
 
-Implemented REST shared interfaces:
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotOrderRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `IFuturesSymbolRestClient`
-- `IFuturesOrderRestClient`
-- `ILeverageRestClient`
-- `IMarkPriceKlineRestClient`
-- `IIndexPriceKlineRestClient`
-- `IOpenInterestRestClient`
-- `IFuturesTickerRestClient`
-- `IFundingRateRestClient`
-- `IPositionModeRestClient`
-- `IPositionHistoryRestClient`
-- `IFeeRestClient`
-- `ISpotTriggerOrderRestClient`
-- `IFuturesTriggerOrderRestClient`
-- `IFuturesTpSlRestClient`
-- `ISpotOrderClientIdRestClient`
-- `IFuturesOrderClientIdRestClient`
-- `IBookTickerRestClient`
-- `ITransferRestClient`
+The exchange aggregate is `IOKXSharedApiClient`. It exposes:
 
-Socket shared client:
+- `Rest` as `IOKXRestClientUnifiedSharedApi`
+- `Socket` as `IOKXSocketClientUnifiedSharedApi`
 
-- `socket.UnifiedApi.SharedClient`
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
-Implemented socket shared interfaces:
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
 
-- `ITickerSocketClient`
-- `ITradeSocketClient`
-- `IBookTickerSocketClient`
-- `IKlineSocketClient`
-- `IOrderBookSocketClient`
-- `IBalanceSocketClient`
-- `ISpotOrderSocketClient`
-- `IFuturesOrderSocketClient`
-- `ISpotOrderManagementSocketClient`
-- `IFuturesOrderManagementSocketClient`
-- `IUserTradeSocketClient`
-- `IPositionSocketClient`
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
 
-Call `SharedClient.Discover()` before relying on optional shared features.
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `IOKXSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Symbols
 

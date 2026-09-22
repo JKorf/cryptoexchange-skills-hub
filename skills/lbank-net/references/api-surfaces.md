@@ -109,39 +109,33 @@ Socket order-book depth must be `10`, `50`, or `100`. Pass `null` as the private
 
 Some individual upstream endpoints document compact uppercase symbol inputs. Follow the selected method's interface documentation when it explicitly differs; default native integration examples to lowercase underscore-separated symbols.
 
-## SharedApis Interfaces
+## Shared API V2
 
-REST shared client: `client.SpotApi.SharedClient`
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-Implemented REST interfaces:
+- `restClient.SpotApi.SharedApi`
+- `socketClient.SpotApi.SharedApi`
 
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IBookTickerRestClient`
-- `IDepositRestClient`
-- `IFeeRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `ISpotOrderRestClient`
-- `ISpotOrderClientIdRestClient`
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-Socket shared client: `socket.SpotApi.SharedClient`
+The exchange aggregate is `ILBankSharedApiClient`. It exposes:
 
-Implemented socket interfaces:
+- `SpotRest` as `ILBankRestClientSpotSharedApi`
+- `SpotSocket` as `ILBankSocketClientSpotSharedApi`
 
-- `IBalanceSocketClient`
-- `IKlineSocketClient`
-- `ITradeSocketClient`
-- `IOrderBookSocketClient`
-- `ITickerSocketClient`
-- `ISpotOrderSocketClient`
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
-Call `SharedClient.Discover()` before relying on optional behavior. The all-assets shared operation is unavailable; request a specified asset.
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `ILBankSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Result Types
 

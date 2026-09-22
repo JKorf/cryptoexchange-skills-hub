@@ -205,43 +205,40 @@ if (!orderSub.Success)
 await socket.UnsubscribeAsync(orderSub.Data);
 ```
 
-## SharedApis REST
+## Shared API V2
 
-Use this when the user wants exchange-agnostic code. Call discovery before relying on optional features.
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
-using Bybit.Net.Clients;
 using CryptoExchange.Net.SharedApis;
 
-var shared = new BybitRestClient().V5Api.SharedClient;
-var info = shared.Discover();
-
-Console.WriteLine($"Shared exchange: {shared.Exchange}");
-Console.WriteLine($"Supported trading modes: {string.Join(", ", shared.SupportedTradingModes)}");
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
-```
-
-## SharedApis Websocket
-
-```csharp
-var socket = new BybitSocketClient();
-ITradeSocketClient trades = socket.V5LinearApi.SharedClient;
+using var client = new BybitRestClient();
+IGetTickerRest ticker = client.V5Api.SharedApi;
 var symbol = new SharedSymbol(TradingMode.PerpetualLinear, "ETH", "USDT");
 
-var sub = await trades.SubscribeToTradeUpdatesAsync(
-    new SubscribeTradeRequest(symbol),
-    update => Console.WriteLine($"[{trades.Exchange}] trades: {update.Data.Length}"));
-
-if (!sub.Success)
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
+if (!result.Success)
 {
-    Console.WriteLine($"Subscribe failed: {sub.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
-await socket.UnsubscribeAsync(sub.Data);
+Console.WriteLine(result.Data.LastPrice);
 ```
 
-Shared socket interfaces do not expose `UnsubscribeAsync`; keep the concrete socket client and call `socket.UnsubscribeAsync(sub.Data)`.
+Inject `IBybitSharedApiClient` when a service needs multiple Bybit Shared API surfaces. It exposes `Rest`, `SpotSocket`, `LinearSocket`, `InverseSocket`, `PrivateSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Error Handling And Retry
 
@@ -290,7 +287,7 @@ services.AddBybit(options =>
 });
 ```
 
-Inject `IBybitRestClient` and `IBybitSocketClient`, or follow the consuming project's existing interface pattern. `AddBybit` registers shared REST interfaces from `V5Api.SharedClient`, and shared socket interfaces from `V5SpotApi.SharedClient`, `V5LinearApi.SharedClient`, `V5InverseApi.SharedClient`, and `V5PrivateApi.SharedClient`.
+Inject `IBybitRestClient` and `IBybitSocketClient`, or follow the consuming project's existing interface pattern. `AddBybit` registers shared REST interfaces from `V5Api.SharedApi`, and shared socket interfaces from `V5SpotApi.SharedApi`, `V5LinearApi.SharedApi`, `V5InverseApi.SharedApi`, and `V5PrivateApi.SharedApi`.
 
 ## Local Examples
 
@@ -299,5 +296,4 @@ When available, read:
 - `../Bybit.Net/Examples/ai-friendly/01-v5-market-and-account.cs`
 - `../Bybit.Net/Examples/ai-friendly/02-v5-trading.cs`
 - `../Bybit.Net/Examples/ai-friendly/03-websocket.cs`
-- `../Bybit.Net/Examples/ai-friendly/04-shared-client.cs`
 - `../Bybit.Net/Examples/ai-friendly/05-error-handling.cs`

@@ -1,6 +1,6 @@
 ---
 name: xt-net
-description: Build C#/.NET XT integrations with XT.Net, including SpotApi, USDT-M and Coin-M futures REST APIs, the combined futures websocket API, market data, balances, orders, positions, leverage, private streams, SharedApis, dependency injection, local order books, trackers, HttpResult handling, and WebSocketResult handling. Use when the user asks for XT market data, account, spot or futures trading, websocket updates, private streams, or idiomatic XT.Net code.
+description: Build C#/.NET XT integrations with XT.Net, including SpotApi, USDT-M and Coin-M futures REST APIs, the combined futures websocket API, market data, balances, orders, positions, leverage, private streams, Shared API V2 strict capabilities and aggregates, dependency injection, local order books, trackers, HttpResult handling, and WebSocketResult handling. Use when the user asks for XT market data, account, spot or futures trading, websocket updates, private streams, or idiomatic XT.Net code.
 ---
 
 # XT.Net
@@ -127,17 +127,24 @@ Public futures subscriptions use `socket.FuturesApi` and uppercase underscore sy
 
 Private spot streams use a websocket token from `rest.SpotApi.Account.GetWebsocketTokenAsync()`. Private futures streams use a listen key from `rest.UsdtFuturesApi.Account.GetListenKeyAsync()`. Credentialed socket clients also expose overloads that acquire these automatically.
 
-## SharedApis
+## Shared API V2
 
-Shared clients are available at:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
-- `rest.SpotApi.SharedClient`
-- `rest.UsdtFuturesApi.SharedClient`
-- `rest.CoinFuturesApi.SharedClient`
-- `socket.SpotApi.SharedClient`
-- `socket.FuturesApi.SharedClient`
+```csharp
+using CryptoExchange.Net.SharedApis;
 
-Use `SharedClient.Discover()` for runtime capability metadata. Do not mix native XT models with SharedApis request or response models.
+using var client = new XTRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+```
+
+Use `IXTSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `UsdtFuturesRest`, `CoinFuturesRest`, `SpotSocket`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix XT-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

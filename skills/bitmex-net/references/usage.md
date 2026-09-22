@@ -232,50 +232,40 @@ if (!orderSub.Success)
 await socket.UnsubscribeAsync(orderSub.Data);
 ```
 
-## SharedApis REST
+## Shared API V2
 
-Use this when the user wants exchange-agnostic code. Call discovery before relying on optional features.
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
-using BitMEX.Net.Clients;
 using CryptoExchange.Net.SharedApis;
 
-var shared = new BitMEXRestClient().ExchangeApi.SharedClient;
-var info = shared.Discover();
-
-Console.WriteLine($"Exchange: {shared.Exchange}");
-Console.WriteLine($"Trading modes: {string.Join(", ", shared.SupportedTradingModes)}");
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
-
-var assets = await shared.GetAssetsAsync(new GetAssetsRequest());
-if (!assets.Success)
-{
-    Console.WriteLine($"Shared asset request failed: {assets.Error}");
-    return;
-}
-```
-
-## SharedApis Websocket
-
-```csharp
-var socket = new BitMEXSocketClient();
-ITradeSocketClient trades = socket.ExchangeApi.SharedClient;
+using var client = new BitMEXRestClient();
+IGetTickerRest ticker = client.ExchangeApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.PerpetualInverse, "XBT", "USD");
 
-var sub = await trades.SubscribeToTradeUpdatesAsync(
-    new SubscribeTradeRequest(symbol),
-    update => Console.WriteLine($"[{trades.Exchange}] trades: {update.Data.Length}"));
-
-if (!sub.Success)
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
+if (!result.Success)
 {
-    Console.WriteLine($"Subscribe failed: {sub.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
-await socket.UnsubscribeAsync(sub.Data);
+Console.WriteLine(result.Data.LastPrice);
 ```
 
-Shared socket interfaces do not expose `UnsubscribeAsync`; keep the concrete socket client and call `socket.UnsubscribeAsync(sub.Data)`.
+Inject `IBitMEXSharedApiClient` when a service needs multiple BitMEX Shared API surfaces. It exposes `Rest`, `Socket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Error Handling And Retry
 
@@ -325,7 +315,7 @@ services.AddBitMEX(options =>
 });
 ```
 
-Inject `IBitMEXRestClient` and `IBitMEXSocketClient`, or follow the consuming project's existing interface pattern. `AddBitMEX` registers shared REST and socket interfaces from `ExchangeApi.SharedClient`.
+Inject `IBitMEXRestClient` and `IBitMEXSocketClient`, or follow the consuming project's existing interface pattern. `AddBitMEX` registers shared REST and socket interfaces from `ExchangeApi.SharedApi`.
 
 ## Local Examples
 
@@ -334,6 +324,4 @@ When available, read:
 - `../BitMEX.Net/Examples/ai-friendly/01-market-and-account.cs`
 - `../BitMEX.Net/Examples/ai-friendly/02-trading-and-positions.cs`
 - `../BitMEX.Net/Examples/ai-friendly/03-websocket.cs`
-- `../BitMEX.Net/Examples/ai-friendly/04-shared-client.cs`
 - `../BitMEX.Net/Examples/ai-friendly/05-error-handling.cs`
-

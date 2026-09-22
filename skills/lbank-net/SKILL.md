@@ -1,6 +1,6 @@
 ---
 name: lbank-net
-description: Build C#/.NET LBank integrations with LBank.Net, including package setup, SpotApi REST clients, public and private websocket subscriptions, market data, balances, deposits, withdrawals, spot order management, HMAC or RSA credentials, lowercase underscore-separated symbols, dependency injection, local order books, trackers, user client providers, HttpResult REST handling, WebSocketResult subscription handling, and CryptoExchange.Net SharedApis. Use when the user asks for LBank spot market data, wallet or account code, trading, user streams, websocket updates, error handling, or converting raw LBank API usage to idiomatic LBank.Net. Current LBank.Net does not expose futures, derivatives, or margin clients.
+description: Build C#/.NET LBank integrations with LBank.Net, including package setup, SpotApi REST clients, public and private websocket subscriptions, market data, balances, deposits, withdrawals, spot order management, HMAC or RSA credentials, lowercase underscore-separated symbols, dependency injection, local order books, trackers, user client providers, HttpResult REST handling, WebSocketResult subscription handling, and CryptoExchange.Net Shared API V2 strict capabilities and aggregates. Use when the user asks for LBank spot market data, wallet or account code, trading, user streams, websocket updates, error handling, or converting raw LBank API usage to idiomatic LBank.Net. Current LBank.Net does not expose futures, derivatives, or margin clients.
 ---
 
 # LBank.Net
@@ -46,12 +46,12 @@ REST surfaces:
 - `rest.SpotApi.ExchangeData`: time, symbols, assets, books, prices, tickers, trades, and klines
 - `rest.SpotApi.Account`: balances, account information, deposits, withdrawals, fees, and user-stream keys
 - `rest.SpotApi.Trading`: place, query, paginate, and cancel Spot orders
-- `rest.SpotApi.SharedClient`: shared Spot REST interfaces
+- `rest.SpotApi.SharedApi`: shared Spot REST interfaces
 
 Socket surfaces:
 
 - `socket.SpotApi`: public trades, klines, books, tickers, and private order/balance updates
-- `socket.SpotApi.SharedClient`: shared Spot socket interfaces
+- `socket.SpotApi.SharedApi`: shared Spot socket interfaces
 
 Read `references/api-surfaces.md` when selecting a method or shared interface.
 
@@ -143,22 +143,24 @@ Private order and balance subscriptions accept a listen key. Pass `null` on an a
 
 Keep handlers fast and unsubscribe on shutdown.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers =
-    new LBankRestClient().SpotApi.SharedClient;
+using var client = new LBankRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
 
-var result = await tickers.GetSpotTickerAsync(
+var result = await ticker.GetTickerAsync(
     new GetTickerRequest(
         new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 ```
 
-Do not mix native LBank request/model types with SharedApis request/model types. Call `SharedClient.Discover()` before relying on optional shared capabilities. LBank cannot provide a complete all-assets query through the shared assets surface; request a specified asset.
+Use `ILBankSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `SpotSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix LBank-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

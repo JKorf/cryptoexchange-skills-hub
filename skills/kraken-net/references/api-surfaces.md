@@ -180,73 +180,37 @@ Futures symbols use Kraken futures names such as `PF_ETHUSD`.
 - `SubscribeToTradeUpdatesAsync(symbols, updateHandler)`
 - `SubscribeToUserTradeUpdatesAsync(handler)`
 
-## SharedApis Interfaces
+## Shared API V2
 
-REST shared clients:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-- `client.SpotApi.SharedClient`
-- `client.FuturesApi.SharedClient`
+- `restClient.SpotApi.SharedApi`
+- `restClient.FuturesApi.SharedApi`
+- `socketClient.SpotApi.SharedApi`
+- `socketClient.FuturesApi.SharedApi`
 
-Implemented spot REST shared interfaces:
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotOrderRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `IFeeRestClient`
-- `ISpotOrderClientIdRestClient`
-- `IBookTickerRestClient`
+The exchange aggregate is `IKrakenSharedApiClient`. It exposes:
 
-Implemented futures REST shared interfaces:
+- `SpotRest` as `IKrakenRestClientSpotSharedApi`
+- `FuturesRest` as `IKrakenRestClientFuturesSharedApi`
+- `SpotSocket` as `IKrakenSocketClientSpotSharedApi`
+- `FuturesSocket` as `IKrakenSocketClientFuturesSharedApi`
 
-- `IBalanceRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `IFundingRateRestClient`
-- `IFuturesSymbolRestClient`
-- `IFuturesTickerRestClient`
-- `IMarkPriceKlineRestClient`
-- `IOpenInterestRestClient`
-- `ILeverageRestClient`
-- `IFuturesOrderRestClient`
-- `IFeeRestClient`
-- `IFuturesOrderClientIdRestClient`
-- `IFuturesTpSlRestClient`
-- `IBookTickerRestClient`
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
-Socket shared clients:
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
 
-- `socket.SpotApi.SharedClient`
-- `socket.FuturesApi.SharedClient`
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
 
-Implemented spot socket shared interfaces:
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
 
-- `ITickerSocketClient`
-- `ITradeSocketClient`
-- `IBookTickerSocketClient`
-- `IKlineSocketClient`
-- `IBalanceSocketClient`
-- `ISpotOrderSocketClient`
-
-Implemented futures socket shared interfaces:
-
-- `ITickerSocketClient`
-- `ITradeSocketClient`
-- `IBookTickerSocketClient`
-- `IBalanceSocketClient`
-- `IFuturesOrderSocketClient`
-- `IUserTradeSocketClient`
-- `IPositionSocketClient`
-
-Call `SharedClient.Discover()` before relying on optional shared features.
+The library's DI registration registers `IKrakenSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Symbols
 

@@ -62,24 +62,38 @@ Sockets commonly use:
 
 Confirm exact overloads from the local library source or `../Binance.Net/Examples/ai-friendly/` before generating non-trivial code.
 
-## SharedApis Surfaces
+## Shared API V2
 
-Use `.SharedClient` when writing exchange-agnostic code:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
+
+- `restClient.SpotApi.SharedApi`
+- `restClient.UsdFuturesApi.SharedApi`
+- `restClient.CoinFuturesApi.SharedApi`
+- `socketClient.SpotApi.SharedApi`
+- `socketClient.UsdFuturesApi.SharedApi`
+- `socketClient.CoinFuturesApi.SharedApi`
+
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
+
+The exchange aggregate is `IBinanceSharedApiClient`. It exposes:
+
+- `SpotRest` as `IBinanceRestClientSpotSharedApi`
+- `UsdFuturesRest` as `IBinanceRestClientUsdFuturesSharedApi`
+- `CoinFuturesRest` as `IBinanceRestClientCoinFuturesSharedApi`
+- `SpotSocket` as `IBinanceSocketClientSpotSharedApi`
+- `UsdFuturesSocket` as `IBinanceSocketClientUsdFuturesSharedApi`
+- `CoinFuturesSocket` as `IBinanceSocketClientCoinFuturesSharedApi`
+
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
 ```csharp
-var sharedSpot = new BinanceRestClient().SpotApi.SharedClient;
-var sharedSocket = new BinanceSocketClient().SpotApi.SharedClient;
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
 
-Common shared interfaces include:
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
 
-- `ISpotTickerRestClient`
-- `ISpotOrderRestClient`
-- `IBalanceRestClient`
-- `IFuturesOrderRestClient`
-- `IPositionRestClient`
-- `ITickerSocketClient`
-- `IOrderBookSocketClient`
-- `ISpotOrderManagementSocketClient`
-- `IFuturesOrderManagementSocketClient`
-
+The library's DI registration registers `IBinanceSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.

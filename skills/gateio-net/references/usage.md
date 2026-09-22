@@ -243,15 +243,18 @@ if (!order.Success)
 
 Socket order request methods return `QueryResult<T>`, not `HttpResult<T>`.
 
-## SharedApis Spot Ticker
+## Shared API V2
+
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new GateIoRestClient().SpotApi.SharedClient;
+using var client = new GateIoRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USDT");
 
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
     Console.WriteLine(result.Error);
@@ -261,7 +264,19 @@ if (!result.Success)
 Console.WriteLine(result.Data.LastPrice);
 ```
 
-Use native GateIo APIs for Gate.io-only details such as Alpha, rebate, unified account, and exchange-specific trigger parameters.
+Inject `IGateIoSharedApiClient` when a service needs multiple GateIo Shared API surfaces. It exposes `SpotRest`, `PerpetualFuturesRest`, `SpotSocket`, `PerpetualFuturesSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Dependency Injection
 

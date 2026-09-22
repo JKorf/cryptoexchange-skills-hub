@@ -66,10 +66,10 @@ Read this file before generating Pionex account, trading, cancel-all, private we
 - Clear cached user clients when credentials change.
 - Treat user identifiers as application data; validate them and do not expose secrets through identifiers or logs.
 
-## SharedApis
+## Shared API V2
 
 - Use native Pionex APIs for Pionex-specific metadata and models.
 - Use SharedApis for portable exchange-agnostic workflows.
-- Do not mix native `PionexTicker.ClosePrice` with shared `SharedSpotTicker.LastPrice`.
+- Do not mix native `PionexTicker.ClosePrice` with shared `SharedTicker.LastPrice`.
 - Use `Discover()` before assuming optional shared features.
 - Do not claim shared futures, positions, funding, withdrawal, or deposit support.

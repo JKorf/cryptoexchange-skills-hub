@@ -1,6 +1,6 @@
 ---
 name: mexc-net
-description: Build C#/.NET MEXC integrations with Mexc.Net, including JK.Mexc.Net package setup, SpotApi, FuturesApi, REST clients, websocket subscriptions, spot market data, futures market data, account balances, deposits, withdrawals, transfers, subaccounts, spot order placement/test orders/cancellation, futures leverage, futures position mode, futures positions, futures order placement/cancellation/editing, plan orders, TP/SL orders, trailing orders, MexcCredentials HMAC/RSA authentication, MEXC spot symbols, MEXC futures symbols, spot listen-key user streams, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, trackers, and SharedApis access. Use when the user asks for MEXC spot market data, MEXC account or trading code, MEXC futures, MEXC websocket updates, MEXC private streams, MEXC error handling, or converting raw MEXC API usage to idiomatic Mexc.Net.
+description: Build C#/.NET MEXC integrations with Mexc.Net, including JK.Mexc.Net package setup, SpotApi, FuturesApi, REST clients, websocket subscriptions, spot market data, futures market data, account balances, deposits, withdrawals, transfers, subaccounts, spot order placement/test orders/cancellation, futures leverage, futures position mode, futures positions, futures order placement/cancellation/editing, plan orders, TP/SL orders, trailing orders, MexcCredentials HMAC/RSA authentication, MEXC spot symbols, MEXC futures symbols, spot listen-key user streams, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, trackers, and Shared API V2 strict capabilities and aggregates. Use when the user asks for MEXC spot market data, MEXC account or trading code, MEXC futures, MEXC websocket updates, MEXC private streams, MEXC error handling, or converting raw MEXC API usage to idiomatic Mexc.Net.
 ---
 
 # Mexc.Net
@@ -48,8 +48,8 @@ var socket = new MexcSocketClient();
 
 Primary REST API surfaces:
 
-- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Trading`, `rest.SpotApi.SubAccount`, `rest.SpotApi.SharedClient`
-- `rest.FuturesApi.ExchangeData`, `rest.FuturesApi.Account`, `rest.FuturesApi.Trading`, `rest.FuturesApi.SharedClient`
+- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Trading`, `rest.SpotApi.SubAccount`, `rest.SpotApi.SharedApi`
+- `rest.FuturesApi.ExchangeData`, `rest.FuturesApi.Account`, `rest.FuturesApi.Trading`, `rest.FuturesApi.SharedApi`
 
 Primary socket API surfaces:
 
@@ -178,21 +178,24 @@ Futures private streams use the authenticated socket client directly through `so
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new MexcRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+using var client = new MexcRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-Mexc.Net exposes SharedApis from `SpotApi.SharedClient` and `FuturesApi.SharedClient` on REST and socket clients.
+Use `IMexcSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
 
-Do not mix Mexc-native request/model types with `SharedApis` request/model types.
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Mexc-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 
@@ -205,7 +208,7 @@ services.AddMexc(options =>
 });
 ```
 
-Inject `IMexcRestClient` and `IMexcSocketClient`, or the registered Mexc REST/socket client interfaces used by the target project. `AddMexc` also registers supported SharedApis interfaces from `SpotApi.SharedClient` and `FuturesApi.SharedClient`.
+Inject `IMexcRestClient` and `IMexcSocketClient`, or the registered Mexc REST/socket client interfaces used by the target project. `AddMexc` also registers supported SharedApis interfaces from `SpotApi.SharedApi` and `FuturesApi.SharedApi`.
 
 ## Safety Rules
 

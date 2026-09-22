@@ -201,47 +201,40 @@ if (!orderSub.Success)
 await socket.UnsubscribeAsync(orderSub.Data);
 ```
 
-## SharedApis REST
+## Shared API V2
 
-Use this when the user wants exchange-agnostic code. Call discovery before relying on optional features.
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
-using BloFin.Net.Clients;
 using CryptoExchange.Net.SharedApis;
 
-var client = new BloFinRestClient();
-var accountShared = client.AccountApi.SharedClient;
-var futuresShared = client.FuturesApi.SharedClient;
-
-var accountInfo = accountShared.Discover();
-var futuresInfo = futuresShared.Discover();
-
-Console.WriteLine($"Account shared exchange: {accountInfo.Exchange}");
-Console.WriteLine($"Futures shared exchange: {futuresInfo.Exchange}");
-Console.WriteLine($"Futures trading modes: {string.Join(", ", futuresInfo.SupportedTradingModes)}");
-```
-
-## SharedApis Websocket
-
-```csharp
-var socket = new BloFinSocketClient();
-ITradeSocketClient trades = socket.FuturesApi.SharedClient;
+using var client = new BloFinRestClient();
+IGetTickerRest ticker = client.FuturesApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.PerpetualLinear, "ETH", "USDT");
 
-var sub = await trades.SubscribeToTradeUpdatesAsync(
-    new SubscribeTradeRequest(symbol),
-    update => Console.WriteLine($"[{trades.Exchange}] trades: {update.Data.Length}"));
-
-if (!sub.Success)
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
+if (!result.Success)
 {
-    Console.WriteLine($"Subscribe failed: {sub.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
-await socket.UnsubscribeAsync(sub.Data);
+Console.WriteLine(result.Data.LastPrice);
 ```
 
-Shared socket interfaces do not expose `UnsubscribeAsync`; keep the concrete socket client and call `socket.UnsubscribeAsync(sub.Data)`.
+Inject `IBloFinSharedApiClient` when a service needs multiple BloFin Shared API surfaces. It exposes `AccountRest`, `FuturesRest`, `FuturesSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Error Handling And Retry
 
@@ -290,7 +283,7 @@ services.AddBloFin(options =>
 });
 ```
 
-Inject `IBloFinRestClient` and `IBloFinSocketClient`, or follow the consuming project's existing interface pattern. `AddBloFin` registers shared REST interfaces from `AccountApi.SharedClient` and `FuturesApi.SharedClient`, and shared socket interfaces from `FuturesApi.SharedClient`.
+Inject `IBloFinRestClient` and `IBloFinSocketClient`, or follow the consuming project's existing interface pattern. `AddBloFin` registers shared REST interfaces from `AccountApi.SharedApi` and `FuturesApi.SharedApi`, and shared socket interfaces from `FuturesApi.SharedApi`.
 
 ## Local Examples
 
@@ -299,5 +292,4 @@ When available, read:
 - `../BloFin.Net/Examples/ai-friendly/01-futures-market-and-account.cs`
 - `../BloFin.Net/Examples/ai-friendly/02-futures-trading.cs`
 - `../BloFin.Net/Examples/ai-friendly/03-websocket.cs`
-- `../BloFin.Net/Examples/ai-friendly/04-shared-client.cs`
 - `../BloFin.Net/Examples/ai-friendly/05-error-handling.cs`

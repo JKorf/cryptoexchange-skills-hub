@@ -1,6 +1,6 @@
 ---
 name: binance-net
-description: Build C#/.NET Binance integrations with Binance.Net, including spot, USD-M futures, COIN-M futures, REST clients, websocket subscriptions, account reads, order placement/cancellation, BinanceCredentials, Binance-specific symbols, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, and SharedApis access. Use when the user asks for Binance market data, Binance account or trading code, Binance futures, Binance websocket updates, Binance error handling, or converting raw Binance API usage to idiomatic Binance.Net.
+description: Build C#/.NET Binance integrations with Binance.Net, including spot, USD-M futures, COIN-M futures, REST clients, websocket subscriptions, account reads, order placement/cancellation, BinanceCredentials, Binance-specific symbols, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Binance market data, Binance account or trading code, Binance futures, Binance websocket updates, Binance error handling, or converting raw Binance API usage to idiomatic Binance.Net.
 ---
 
 # Binance.Net
@@ -164,19 +164,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new BinanceRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+using var client = new BinanceRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-Do not mix Binance-native request/model types with `SharedApis` request/model types.
+Use `IBinanceSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `UsdFuturesRest`, `CoinFuturesRest`, `SpotSocket`, `UsdFuturesSocket`, `CoinFuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Binance-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

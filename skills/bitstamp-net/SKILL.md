@@ -1,6 +1,6 @@
 ---
 name: bitstamp-net
-description: Build C#/.NET Bitstamp integrations with Bitstamp.Net, including ExchangeApi REST clients, websocket subscriptions, spot and derivative market data, account balances, fees, deposits, withdrawals, order placement/cancellation, derivatives positions, leverage settings, BitstampCredentials, Bitstamp slash symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult helper handling, and SharedApis access. Use when the user asks for Bitstamp market data, Bitstamp account or trading code, Bitstamp derivatives, Bitstamp websocket updates, Bitstamp error handling, or converting raw Bitstamp API usage to idiomatic Bitstamp.Net.
+description: Build C#/.NET Bitstamp integrations with Bitstamp.Net, including ExchangeApi REST clients, websocket subscriptions, spot and derivative market data, account balances, fees, deposits, withdrawals, order placement/cancellation, derivatives positions, leverage settings, BitstampCredentials, Bitstamp slash symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Bitstamp market data, Bitstamp account or trading code, Bitstamp derivatives, Bitstamp websocket updates, Bitstamp error handling, or converting raw Bitstamp API usage to idiomatic Bitstamp.Net.
 ---
 
 # Bitstamp.Net
@@ -51,9 +51,9 @@ Current source-checked API surfaces:
 - `rest.ExchangeApi.ExchangeData`: spot and derivative symbols, assets, tickers, order books, trades, klines, conversion rate, funding rates, margin tiers, collateral assets
 - `rest.ExchangeApi.Account`: account balances, fees, user transactions, account symbols, max trade quantity, deposits, withdrawals, margin info, leverage settings
 - `rest.ExchangeApi.Trading`: spot orders, open orders, order history, replacements, derivatives user trades, derivative positions, close positions, collateral updates
-- `rest.ExchangeApi.SharedClient`: exchange-agnostic SharedApis REST interfaces for spot and derivatives workflows
+- `rest.ExchangeApi.SharedApi`: exchange-agnostic SharedApis REST interfaces for spot and derivatives workflows
 - `socket.ExchangeApi`: public trade/order book/funding subscriptions plus private order and user trade subscriptions
-- `socket.ExchangeApi.SharedClient`: exchange-agnostic spot socket interfaces for trades and order books
+- `socket.ExchangeApi.SharedApi`: exchange-agnostic spot socket interfaces for trades and order books
 
 Do not use exchange roots from other libraries such as `SpotApi`, `UsdFuturesApi`, `FuturesApiV2`, `SpotApiV3`, `CoinFuturesApi`, or `PerpetualFuturesApi`.
 
@@ -162,19 +162,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-var shared = new BitstampRestClient().ExchangeApi.SharedClient;
-var info = shared.Discover();
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
+using var client = new BitstampRestClient();
+IGetTickerRest ticker = client.ExchangeApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USD")));
 ```
 
-Bitstamp exposes shared clients on `ExchangeApi.SharedClient`. Shared REST supports spot and perpetual linear workflows; shared socket support is spot-only. Call `Discover()` before routing optional shared features. Do not mix Bitstamp-native request/model types with `SharedApis` request/model types.
+Use `IBitstampSharedApiClient` as the exchange aggregate. Its aggregate properties—`Rest`, `Socket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Bitstamp-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

@@ -1,6 +1,6 @@
 ---
 name: gateio-net
-description: Build C#/.NET Gate.io integrations with GateIo.Net, including SpotApi, PerpetualFuturesApi, RebateApi, AlphaApi, REST clients, websocket subscriptions, socket request methods, spot and perpetual futures market data, account balances, deposits, withdrawals, transfers, unified and margin account operations, order placement/cancellation, trigger orders, futures positions, leverage, GateIoCredentials, Gate.io underscore symbols, settlement assets, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for Gate.io spot market data, Gate.io account or trading code, Gate.io futures, Gate.io websocket updates, Gate.io error handling, or converting raw Gate.io API usage to idiomatic GateIo.Net.
+description: Build C#/.NET Gate.io integrations with GateIo.Net, including SpotApi, PerpetualFuturesApi, RebateApi, AlphaApi, REST clients, websocket subscriptions, socket request methods, spot and perpetual futures market data, account balances, deposits, withdrawals, transfers, unified and margin account operations, order placement/cancellation, trigger orders, futures positions, leverage, GateIoCredentials, Gate.io underscore symbols, settlement assets, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Gate.io spot market data, Gate.io account or trading code, Gate.io futures, Gate.io websocket updates, Gate.io error handling, or converting raw Gate.io API usage to idiomatic GateIo.Net.
 ---
 
 # GateIo.Net
@@ -49,8 +49,8 @@ var socket = new GateIoSocketClient();
 
 Primary REST API surfaces:
 
-- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Trading`, `rest.SpotApi.SharedClient`
-- `rest.PerpetualFuturesApi.ExchangeData`, `rest.PerpetualFuturesApi.Account`, `rest.PerpetualFuturesApi.Trading`, `rest.PerpetualFuturesApi.SharedClient`
+- `rest.SpotApi.ExchangeData`, `rest.SpotApi.Account`, `rest.SpotApi.Trading`, `rest.SpotApi.SharedApi`
+- `rest.PerpetualFuturesApi.ExchangeData`, `rest.PerpetualFuturesApi.Account`, `rest.PerpetualFuturesApi.Trading`, `rest.PerpetualFuturesApi.SharedApi`
 - `rest.RebateApi`: Gate.io rebate endpoints
 - `rest.AlphaApi`: Gate.io Alpha endpoints
 
@@ -193,21 +193,24 @@ Native socket order request methods, such as `socket.SpotApi.PlaceOrderAsync(...
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new GateIoRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+using var client = new GateIoRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 ```
 
-GateIo.Net exposes SharedApis from `SpotApi.SharedClient` and `PerpetualFuturesApi.SharedClient` on both REST and socket clients. `RebateApi` and `AlphaApi` are Gate.io-specific native REST surfaces and are not SharedApis roots.
+Use `IGateIoSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `PerpetualFuturesRest`, `SpotSocket`, `PerpetualFuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
 
-Do not mix GateIo-native request/model types with `SharedApis` request/model types.
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix GateIo-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 
@@ -220,7 +223,7 @@ services.AddGateIo(options =>
 });
 ```
 
-Inject `IGateIoRestClient` and `IGateIoSocketClient`, or the registered GateIo REST/socket client interfaces used by the target project. `AddGateIo` also registers supported SharedApis interfaces from `SpotApi.SharedClient` and `PerpetualFuturesApi.SharedClient`.
+Inject `IGateIoRestClient` and `IGateIoSocketClient`, or the registered GateIo REST/socket client interfaces used by the target project. `AddGateIo` also registers supported SharedApis interfaces from `SpotApi.SharedApi` and `PerpetualFuturesApi.SharedApi`.
 
 ## Safety Rules
 

@@ -224,52 +224,40 @@ if (!orderSub.Success)
 await socket.UnsubscribeAsync(orderSub.Data);
 ```
 
-## SharedApis REST
+## Shared API V2
 
-Use this when the user wants exchange-agnostic code. Call discovery before relying on optional features.
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
-using Bitstamp.Net.Clients;
 using CryptoExchange.Net.SharedApis;
 
-var shared = new BitstampRestClient().ExchangeApi.SharedClient;
-var info = shared.Discover();
-
-Console.WriteLine($"Exchange: {shared.Exchange}");
-Console.WriteLine($"Trading modes: {string.Join(", ", shared.SupportedTradingModes)}");
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
-
-var symbols = await shared.GetSpotSymbolsAsync(new GetSymbolsRequest());
-if (!symbols.Success)
-{
-    Console.WriteLine($"Shared spot symbol request failed: {symbols.Error}");
-    return;
-}
-```
-
-## SharedApis Websocket
-
-Bitstamp shared websocket support is spot-only.
-
-```csharp
-var socket = new BitstampSocketClient();
-ITradeSocketClient trades = socket.ExchangeApi.SharedClient;
+using var client = new BitstampRestClient();
+IGetTickerRest ticker = client.ExchangeApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USD");
 
-var sub = await trades.SubscribeToTradeUpdatesAsync(
-    new SubscribeTradeRequest(symbol),
-    update => Console.WriteLine($"[{trades.Exchange}] trades: {update.Data.Length}"));
-
-if (!sub.Success)
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
+if (!result.Success)
 {
-    Console.WriteLine($"Subscribe failed: {sub.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
-await socket.UnsubscribeAsync(sub.Data);
+Console.WriteLine(result.Data.LastPrice);
 ```
 
-Shared socket interfaces do not expose `UnsubscribeAsync`; keep the concrete socket client and call `socket.UnsubscribeAsync(sub.Data)`.
+Inject `IBitstampSharedApiClient` when a service needs multiple Bitstamp Shared API surfaces. It exposes `Rest`, `Socket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Error Handling And Retry
 
@@ -319,7 +307,7 @@ services.AddBitstamp(options =>
 });
 ```
 
-Inject `IBitstampRestClient` and `IBitstampSocketClient`, or follow the consuming project's existing interface pattern. `AddBitstamp` registers shared REST and socket interfaces from `ExchangeApi.SharedClient`.
+Inject `IBitstampRestClient` and `IBitstampSocketClient`, or follow the consuming project's existing interface pattern. `AddBitstamp` registers shared REST and socket interfaces from `ExchangeApi.SharedApi`.
 
 ## Local Examples
 
@@ -328,5 +316,4 @@ When available, read:
 - `../Bitstamp.Net/Examples/ai-friendly/01-market-and-account.cs`
 - `../Bitstamp.Net/Examples/ai-friendly/02-trading-and-positions.cs`
 - `../Bitstamp.Net/Examples/ai-friendly/03-websocket.cs`
-- `../Bitstamp.Net/Examples/ai-friendly/04-shared-client.cs`
 - `../Bitstamp.Net/Examples/ai-friendly/05-error-handling.cs`

@@ -1,6 +1,6 @@
 ---
 name: deepcoin-net
-description: Build C#/.NET DeepCoin integrations with DeepCoin.Net, including ExchangeApi REST clients, ExchangeApi websocket subscriptions, spot and swap market data, account balances, deposits, withdrawals, listen keys, leverage, positions, order placement/cancellation, TP/SL, DeepCoinCredentials with API passphrase, DeepCoin hyphenated spot symbols, DeepCoin swap symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for DeepCoin spot market data, DeepCoin account or trading code, DeepCoin swaps/futures, DeepCoin websocket updates, DeepCoin error handling, or converting raw DeepCoin API usage to idiomatic DeepCoin.Net.
+description: Build C#/.NET DeepCoin integrations with DeepCoin.Net, including ExchangeApi REST clients, ExchangeApi websocket subscriptions, spot and swap market data, account balances, deposits, withdrawals, listen keys, leverage, positions, order placement/cancellation, TP/SL, DeepCoinCredentials with API passphrase, DeepCoin hyphenated spot symbols, DeepCoin swap symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for DeepCoin spot market data, DeepCoin account or trading code, DeepCoin swaps/futures, DeepCoin websocket updates, DeepCoin error handling, or converting raw DeepCoin API usage to idiomatic DeepCoin.Net.
 ---
 
 # DeepCoin.Net
@@ -176,19 +176,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new DeepCoinRestClient().ExchangeApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+using var client = new DeepCoinRestClient();
+IGetTickerRest ticker = client.ExchangeApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 ```
 
-Do not mix DeepCoin-native request/model types with `SharedApis` request/model types.
+Use `IDeepCoinSharedApiClient` as the exchange aggregate. Its aggregate properties—`Rest`, `Socket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix DeepCoin-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 
@@ -201,7 +206,7 @@ services.AddDeepCoin(options =>
 });
 ```
 
-Inject `IDeepCoinRestClient` and `IDeepCoinSocketClient`, or the registered DeepCoin REST/socket client interfaces used by the target project. `AddDeepCoin` also registers supported SharedApis interfaces from `ExchangeApi.SharedClient`.
+Inject `IDeepCoinRestClient` and `IDeepCoinSocketClient`, or the registered DeepCoin REST/socket client interfaces used by the target project. `AddDeepCoin` also registers supported SharedApis interfaces from `ExchangeApi.SharedApi`.
 
 ## Safety Rules
 

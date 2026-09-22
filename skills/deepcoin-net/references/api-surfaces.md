@@ -79,40 +79,33 @@ Native kline subscriptions support one-minute updates.
 
 Private stream callbacks include order updates, balance updates, position updates, user trade updates, account updates, and trigger order updates. The overload without a listen key obtains and renews a listen key automatically. The overload with a listen key uses `Account.StartUserStreamAsync()` output.
 
-## SharedApis Interfaces
+## Shared API V2
 
-REST shared client: `client.ExchangeApi.SharedClient`
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-Implemented REST shared interfaces:
+- `restClient.ExchangeApi.SharedApi`
+- `socketClient.ExchangeApi.SharedApi`
 
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IWithdrawalRestClient`
-- `ISpotTickerRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotOrderRestClient`
-- `ILeverageRestClient`
-- `IFuturesTickerRestClient`
-- `IFuturesSymbolRestClient`
-- `IFuturesOrderRestClient`
-- `IBookTickerRestClient`
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-Socket shared client: `socket.ExchangeApi.SharedClient`
+The exchange aggregate is `IDeepCoinSharedApiClient`. It exposes:
 
-Implemented socket shared interfaces:
+- `Rest` as `IDeepCoinRestClientExchangeSharedApi`
+- `Socket` as `IDeepCoinSocketClientExchangeSharedApi`
 
-- `IKlineSocketClient`
-- `ITickerSocketClient`
-- `ITradeSocketClient`
-- `IBalanceSocketClient`
-- `ISpotOrderSocketClient`
-- `IFuturesOrderSocketClient`
-- `IUserTradeSocketClient`
-- `IPositionSocketClient`
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
-Supported shared trading modes include `TradingMode.Spot`, `TradingMode.PerpetualLinear`, and `TradingMode.PerpetualInverse`. Call `SharedClient.Discover()` before relying on optional shared features.
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `IDeepCoinSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Symbols
 
@@ -130,4 +123,3 @@ Supported shared trading modes include `TradingMode.Spot`, `TradingMode.Perpetua
 - Shared non-I/O helpers: `ExchangeCallResult<T>`
 
 Always check `Success` before using `Data`. Cancellation and batch cancel methods return result objects that still need inspection after outer success.
-

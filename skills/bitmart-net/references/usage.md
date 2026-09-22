@@ -244,52 +244,40 @@ if (!balanceSub.Success)
 await socket.UnsubscribeAsync(balanceSub.Data);
 ```
 
-## SharedApis REST
+## Shared API V2
 
-Use this when the user wants exchange-agnostic code.
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
-using BitMart.Net.Clients;
 using CryptoExchange.Net.SharedApis;
 
-var client = new BitMartRestClient();
-ISpotTickerRestClient tickers = client.SpotApi.SharedClient;
-
-var discovery = client.SpotApi.SharedClient.Discover();
-Console.WriteLine($"{discovery.Exchange} {discovery.TypeName}");
-
+using var client = new BitMartRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
-    Console.WriteLine($"[{tickers.Exchange}] Failed: {result.Error}");
+    Console.WriteLine(result.Error);
     return;
 }
 
-Console.WriteLine($"[{tickers.Exchange}] {result.Data.Symbol}: {result.Data.LastPrice}");
+Console.WriteLine(result.Data.LastPrice);
 ```
 
-## SharedApis Websocket
+Inject `IBitMartSharedApiClient` when a service needs multiple BitMart Shared API surfaces. It exposes `SpotRest`, `UsdFuturesRest`, `SpotSocket`, `UsdFuturesSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
 
 ```csharp
-var socket = new BitMartSocketClient();
-ITickerSocketClient tickers = socket.SpotApi.SharedClient;
-var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
 
-var sub = await tickers.SubscribeToTickerUpdatesAsync(
-    new SubscribeTickerRequest(symbol),
-    update => Console.WriteLine($"[{tickers.Exchange}] {update.Data.Symbol}: {update.Data.LastPrice}"));
-
-if (!sub.Success)
-{
-    Console.WriteLine($"Subscribe failed: {sub.Error}");
+if (match is null)
     return;
-}
 
-await socket.UnsubscribeAsync(sub.Data);
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
 
-Shared socket interfaces do not expose `UnsubscribeAsync`; keep the concrete socket client and call `socket.UnsubscribeAsync(sub.Data)`.
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Error Handling And Retry
 
@@ -339,7 +327,7 @@ services.AddBitMart(options =>
 });
 ```
 
-Inject `IBitMartRestClient` and `IBitMartSocketClient`, or follow the consuming project's existing interface pattern. `AddBitMart` registers shared REST and socket interfaces for both `SpotApi.SharedClient` and `UsdFuturesApi.SharedClient`.
+Inject `IBitMartRestClient` and `IBitMartSocketClient`, or follow the consuming project's existing interface pattern. `AddBitMart` registers shared REST and socket interfaces for both `SpotApi.SharedApi` and `UsdFuturesApi.SharedApi`.
 
 ## Local Examples
 

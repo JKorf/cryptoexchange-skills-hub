@@ -59,7 +59,7 @@ Use this file before generating Toobit credential, account, transfer, withdrawal
 - If manually using listen keys, call `KeepAliveUserStreamAsync` for long-running streams and `StopUserStreamAsync` on shutdown.
 - Private stream callbacks can contain account, balance, order, position, and trade data; avoid logging sensitive details.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis when the user needs exchange-agnostic code.
 - Use native Toobit APIs for listen-key lifecycle, Toobit-specific futures contract symbols, leverage, margin type, trading stops, withdrawals, and detailed account models.

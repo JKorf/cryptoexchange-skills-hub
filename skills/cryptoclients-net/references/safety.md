@@ -20,7 +20,7 @@
 
 - Aggregate order methods place live orders on the named exchange.
 - Validate symbol support, trading mode, precision, minimums, balances, fees, order type, time in force, and exchange-specific semantics.
-- SharedApis intentionally omit some native options; switch to the native client instead of guessing.
+- Shared API V2 intentionally omits some native options; inspect capability options and switch to the native client instead of guessing.
 - Leverage, position mode, trigger orders, TP/SL, transfers, and withdrawals can alter exposure or move funds.
 - Generate withdrawals or broad multi-exchange writes only when explicitly requested.
 
@@ -35,4 +35,4 @@
 
 - Native properties bypass aggregate normalization and use exchange-specific symbols, enums, models, credentials, and behavior.
 - Read the corresponding exchange skill before native trading or account work.
-- Do not pass SharedApis request/model types to native endpoint methods.
+- Do not pass Shared API request/model types to native endpoint methods.

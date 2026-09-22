@@ -1,6 +1,6 @@
 ---
 name: lighter-net
-description: Build C#/.NET Lighter DEX integrations with JKorf.Lighter.Net 1.1.0+, including ExchangeApi REST clients, websocket subscriptions and socket requests, account reads, order placement/cancellation, leverage and margin updates, LighterCredentials with EthKey, L1 signing, optional integrator fees, Lighter spot and perpetual symbols, signer-backed transactions, local order books, trackers, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, and SharedApis access including IFundingRateRestClient. Use when the user asks for Lighter market data, Lighter account or trading code, Lighter DEX websocket updates, Lighter order books, Lighter tracker workflows, Lighter error handling, or converting raw Lighter API usage to idiomatic Lighter.Net.
+description: Build C#/.NET Lighter DEX integrations with JKorf.Lighter.Net 1.1.0+, including ExchangeApi REST clients, websocket subscriptions and socket requests, account reads, order placement/cancellation, leverage and margin updates, LighterCredentials with EthKey, L1 signing, optional integrator fees, Lighter spot and perpetual symbols, signer-backed transactions, local order books, trackers, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, QueryResult socket request handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Lighter market data, Lighter account or trading code, Lighter DEX websocket updates, Lighter order books, Lighter tracker workflows, Lighter error handling, or converting raw Lighter API usage to idiomatic Lighter.Net.
 ---
 
 # Lighter.Net
@@ -165,19 +165,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Socket order requests return `QueryResult<T>` rather than `WebSocketResult<UpdateSubscription>` because they are request/response operations over websocket.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new LighterRestClient().ExchangeApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDC")));
+using var client = new LighterRestClient();
+IGetTickerRest ticker = client.ExchangeApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDC")));
 ```
 
-Do not mix Lighter-native request/model types with `SharedApis` request/model types.
+Use `ILighterSharedApiClient` as the exchange aggregate. Its aggregate properties—`Rest`, `Socket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Lighter-native request/model types with Shared API request/model types.
 
 ## Order Books And Trackers
 

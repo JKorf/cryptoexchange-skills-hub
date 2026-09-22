@@ -1,6 +1,6 @@
 ---
 name: bitfinex-net
-description: Build C#/.NET Bitfinex integrations with Bitfinex.Net, including spot, margin positions, funding, REST clients, websocket subscriptions, account reads, order placement/cancellation, BitfinexCredentials, Bitfinex-native t/f symbols, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, and SharedApis access. Use when the user asks for Bitfinex market data, Bitfinex account or trading code, Bitfinex funding, Bitfinex websocket updates, Bitfinex error handling, or converting raw Bitfinex API usage to idiomatic Bitfinex.Net.
+description: Build C#/.NET Bitfinex integrations with Bitfinex.Net, including spot, margin positions, funding, REST clients, websocket subscriptions, account reads, order placement/cancellation, BitfinexCredentials, Bitfinex-native t/f symbols, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Bitfinex market data, Bitfinex account or trading code, Bitfinex funding, Bitfinex websocket updates, Bitfinex error handling, or converting raw Bitfinex API usage to idiomatic Bitfinex.Net.
 ---
 
 # Bitfinex.Net
@@ -171,19 +171,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new BitfinexRestClient().ExchangeApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USD")));
+using var client = new BitfinexRestClient();
+IGetTickerRest ticker = client.ExchangeApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USD")));
 ```
 
-Do not mix Bitfinex-native request/model types with `SharedApis` request/model types.
+Use `IBitfinexSharedApiClient` as the exchange aggregate. Its aggregate properties—`Rest`, `Socket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Bitfinex-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

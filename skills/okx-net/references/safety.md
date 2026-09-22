@@ -65,7 +65,7 @@ Use this file before generating OKX credential, account, transfer, withdrawal, s
 - Websocket order request methods return `QueryResult<T>`, take numeric symbol codes, and are live trading requests.
 - For long-running user data services, consider `IOKXTrackerFactory` instead of ad hoc subscription management.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis when the user needs exchange-agnostic code.
 - Use native OKX APIs for account mode, subaccounts, copy trading, detailed options data, websocket order requests, and OKX-specific algo order controls.

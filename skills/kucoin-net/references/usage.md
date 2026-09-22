@@ -7,6 +7,7 @@ using CryptoExchange.Net.Objects;
 using Kucoin.Net;
 using Kucoin.Net.Clients;
 using Kucoin.Net.Enums;
+using Kucoin.Net.Interfaces.Clients;
 ```
 
 ## Public Spot Market Data
@@ -171,7 +172,7 @@ if (!overview.Success)
 var balances = await client.UnifiedApi.Account.GetBalancesAsync();
 ```
 
-Use native `UnifiedApi` methods for KuCoin Unified account workflows. SharedApis are exposed from `SpotApi.SharedClient` and `FuturesApi.SharedClient`, not `UnifiedApi`.
+Use native `UnifiedApi` methods for KuCoin Unified account workflows. Shared API V2 capabilities are exposed from `SpotApi.SharedApi` and `FuturesApi.SharedApi`, not `UnifiedApi`.
 
 ## Spot Websocket Subscription
 
@@ -230,15 +231,16 @@ var sub = await socket.UnifiedApi.SubscribeToOrderUpdatesAsync(
 
 Use the correct `UnifiedAccountType` for the account/trading mode.
 
-## SharedApis Spot Ticker
+## Shared API V2 Spot Ticker
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new KucoinRestClient().SpotApi.SharedClient;
+using var client = new KucoinRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
 var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
 
-var result = await tickers.GetSpotTickerAsync(new GetTickerRequest(symbol));
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
     Console.WriteLine(result.Error);
@@ -246,6 +248,55 @@ if (!result.Success)
 }
 
 Console.WriteLine(result.Data.LastPrice);
+```
+
+The V2 capability returns `HttpResult<SharedTicker>`. Use `client.FuturesApi.SharedApi` for the futures implementation of the same `IGetTickerRest` contract, with a futures `TradingMode` and symbol.
+
+## Shared API V2 Aggregate And Runtime Lookup
+
+Inject `IKucoinSharedApiClient` when a service needs several Kucoin Shared API surfaces:
+
+```csharp
+public sealed class KucoinMarketService(IKucoinSharedApiClient sharedClient)
+{
+    public Task<HttpResult<SharedTicker>> GetSpotTickerAsync(
+        SharedSymbol symbol,
+        CancellationToken ct = default)
+        => sharedClient.SpotRest.GetTickerAsync(
+            new GetTickerRequest(symbol), ct);
+}
+```
+
+The aggregate exposes `SpotRest`, `FuturesRest`, `SpotSocket`, and `FuturesSocket`. When the capability or trading mode is chosen at runtime, use a typed descriptor:
+
+```csharp
+var match = sharedClient.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest,
+    TradingMode.Spot);
+
+if (match is null)
+    return;
+
+var result = await match.Capability.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+```
+
+Prefer the aggregate property or direct capability injection when the required surface is known at compile time.
+
+## Shared API V2 Socket Subscription
+
+```csharp
+using var socket = new KucoinSocketClient();
+ISubscribeTickerSocket ticker = socket.SpotApi.SharedApi;
+
+var result = await ticker.SubscribeToTickerUpdatesAsync(
+    new SubscribeTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")),
+    update => Console.WriteLine(update.Data.LastPrice));
+
+if (result.Success)
+    await result.Data.CloseAsync();
 ```
 
 Use native Kucoin APIs for Unified account, high-frequency spot trading, Earn, margin-specific borrow/lend features, and detailed futures account features.
@@ -262,7 +313,7 @@ services.AddKucoin(options =>
 });
 ```
 
-Inject `IKucoinRestClient` and `IKucoinSocketClient`, or specific registered interfaces already used in the application.
+Inject `IKucoinRestClient` and `IKucoinSocketClient` for native APIs. For Shared API V2, inject `IKucoinSharedApiClient` or a narrow capability such as `IGetTickerRest`. If multiple exchanges are registered, inject `IEnumerable<IGetTickerRest>` and select by exchange and supported trading mode.
 
 ## Error Handling
 

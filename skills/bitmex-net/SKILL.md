@@ -1,6 +1,6 @@
 ---
 name: bitmex-net
-description: Build C#/.NET BitMEX integrations with BitMEX.Net, including ExchangeApi REST clients, websocket subscriptions, market data, account reads, balances, order placement/cancellation, positions, leverage, margin/risk settings, BitMEXCredentials, BitMEX symbols and quantity conversion helpers, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult helper handling, and SharedApis access. Use when the user asks for BitMEX market data, BitMEX account or trading code, BitMEX spot or derivatives symbols, BitMEX websocket updates, BitMEX error handling, or converting raw BitMEX API usage to idiomatic BitMEX.Net.
+description: Build C#/.NET BitMEX integrations with BitMEX.Net, including ExchangeApi REST clients, websocket subscriptions, market data, account reads, balances, order placement/cancellation, positions, leverage, margin/risk settings, BitMEXCredentials, BitMEX symbols and quantity conversion helpers, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for BitMEX market data, BitMEX account or trading code, BitMEX spot or derivatives symbols, BitMEX websocket updates, BitMEX error handling, or converting raw BitMEX API usage to idiomatic BitMEX.Net.
 ---
 
 # BitMEX.Net
@@ -52,9 +52,9 @@ Current source-checked API surfaces:
 - `rest.ExchangeApi.ExchangeData`: symbols, active instruments, order books, trades, klines, funding, assets, indexes, settlements, insurance, liquidations, announcements
 - `rest.ExchangeApi.Account`: account info, fees, balances, balance history, deposits, withdrawals, transfers, margin status, risk limit, margin transfer, saved addresses, API key info
 - `rest.ExchangeApi.Trading`: execution history, orders, cancellations, user executions/trades, positions, cross/isolated leverage
-- `rest.ExchangeApi.SharedClient`: exchange-agnostic SharedApis REST interfaces for spot and derivatives workflows
+- `rest.ExchangeApi.SharedApi`: exchange-agnostic SharedApis REST interfaces for spot and derivatives workflows
 - `socket.ExchangeApi`: public and private websocket subscriptions for trades, klines, order books, book tickers, orders, balances, user trades, positions, settlements, and symbol updates
-- `socket.ExchangeApi.SharedClient`: exchange-agnostic SharedApis socket interfaces
+- `socket.ExchangeApi.SharedApi`: exchange-agnostic SharedApis socket interfaces
 
 Do not use exchange roots from other libraries such as `SpotApi`, `UsdFuturesApi`, `FuturesApiV2`, `SpotApiV3`, `CoinFuturesApi`, or `PerpetualFuturesApi`.
 
@@ -170,19 +170,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-var shared = new BitMEXRestClient().ExchangeApi.SharedClient;
-var info = shared.Discover();
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
+using var client = new BitMEXRestClient();
+IGetTickerRest ticker = client.ExchangeApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.PerpetualInverse, "XBT", "USD")));
 ```
 
-BitMEX exposes shared clients on `ExchangeApi.SharedClient`. Call `Discover()` before routing optional shared features. Do not mix BitMEX-native request/model types with `SharedApis` request/model types.
+Use `IBitMEXSharedApiClient` as the exchange aggregate. Its aggregate properties—`Rest`, `Socket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix BitMEX-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

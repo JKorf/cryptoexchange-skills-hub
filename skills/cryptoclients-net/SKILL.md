@@ -1,13 +1,13 @@
 ---
 name: cryptoclients-net
-description: Build C#/.NET multi-exchange integrations with CryptoClients.Net, focusing on aggregate CryptoExchange.Net SharedApis REST and websocket workflows, capability discovery, shared symbols and models, asset-type filtering, cached symbol catalogs, per-exchange results, async fan-out, credentials, dependency injection, cross-exchange order books, trackers, and user client providers. Also use for full native exchange API access through ExchangeRestClient and ExchangeSocketClient properties when shared interfaces do not expose the required endpoint or model.
+description: Build C#/.NET multi-exchange integrations with CryptoClients.Net, focusing on Shared API V2 capability discovery and execution through IExchangeSharedApiClient, exchange aggregates, strict REST and websocket capabilities, shared symbols and models, async fan-out, credentials, dependency injection, native exchange access, cross-exchange order books, trackers, and user client providers.
 ---
 
 # CryptoClients.Net
 
 ## Overview
 
-Use `CryptoClients.Net` when an application needs broad exchange coverage from one package. Prefer its aggregate SharedApis methods for portable workflows, then use the exposed native clients for exchange-specific endpoints or models.
+Use `CryptoClients.Net` when an application needs broad exchange coverage from one package. Prefer `IExchangeSharedApiClient` and strict Shared API V2 capabilities for portable workflows, then use the exposed native clients for exchange-specific endpoints or models.
 
 Use an individual exchange skill instead when the application targets only one exchange or needs substantial exchange-specific behavior.
 
@@ -21,9 +21,11 @@ dotnet add package CryptoClients.Net --version 5.6.0
 
 ```csharp
 using CryptoClients.Net;
+using CryptoClients.Net.Clients;
 using CryptoClients.Net.Enums;
 using CryptoClients.Net.Interfaces;
 using CryptoClients.Net.Models;
+using CryptoExchange.Net;
 using CryptoExchange.Net.Objects;
 using CryptoExchange.Net.SharedApis;
 ```
@@ -33,71 +35,83 @@ using CryptoExchange.Net.SharedApis;
 ```csharp
 var rest = new ExchangeRestClient();
 var socket = new ExchangeSocketClient();
+var shared = new ExchangeSharedApiClient(new CryptoClientsConfiguration());
 ```
 
-Use `IExchangeRestClient` and `IExchangeSocketClient` with dependency injection.
+Use `IExchangeSharedApiClient` for Shared API V2. Use `IExchangeRestClient` and `IExchangeSocketClient` for the legacy aggregate API or direct native clients.
 
-## SharedApis First
+## Shared API V2 First
 
-Describe markets with `SharedSymbol` and use shared request/model types:
+Resolve strict capabilities with typed `SharedCapabilities` descriptors:
 
 ```csharp
 var symbol = new SharedSymbol(TradingMode.Spot, "BTC", "USDT");
 var request = new GetTickerRequest(symbol);
 var exchanges = new[] { Exchange.Binance, Exchange.Bybit, Exchange.Kraken, Exchange.OKX };
 
-var results = await rest.GetSpotTickerAsync(request, exchanges);
-foreach (var result in results)
+var matches = shared.GetCapabilities(
+    SharedCapabilities.Tickers.GetTicker.Rest,
+    TradingMode.Spot,
+    exchanges);
+
+var calls = matches.Select(async match =>
+    (Match: match,
+     Result: await match.Capability.GetTickerAsync(request)));
+
+await foreach (var item in calls.ParallelEnumerateAsync())
 {
-    if (!result.Success)
+    if (!item.Result.Success)
     {
-        Console.WriteLine($"{result.Exchange}: {result.Error}");
+        Console.WriteLine($"{item.Match.Exchange}: {item.Result.Error}");
         continue;
     }
 
-    Console.WriteLine($"{result.Exchange}: {result.Data.LastPrice}");
+    Console.WriteLine($"{item.Match.Exchange}: {item.Result.Data.LastPrice}");
 }
 ```
 
-Aggregate methods only call shared clients that advertise support for the requested operation. Do not assume every selected exchange implements every SharedApis interface.
+`GetCapabilities` returns one preferred implementation per exchange. Use `GetImplementations` when every matching transport or API surface is needed, including multiple implementations from one exchange.
 
 ## Result Shapes
 
-- One-exchange REST aggregate call: `HttpResult<T>`
-- Multi-exchange REST aggregate call: `HttpResult<T>[]`
-- Streaming fan-out: `IAsyncEnumerable<HttpResult<T>>`
-- One-exchange socket subscription: `WebSocketResult<UpdateSubscription>`
-- Multi-exchange socket subscription: `WebSocketResult<UpdateSubscription>[]`
-- Some symbol/capability helpers: `ExchangeCallResult<T>`
+- REST capabilities such as `IGetTickerRest`: `HttpResult<T>`
+- Websocket request capabilities: `QueryResult<T>`
+- Subscription capabilities: `WebSocketResult<UpdateSubscription>`
+- Transport-independent capabilities: `IExchangeCallResult<T>`
+- Capability lookup: `SharedCapabilityResolution<T>`
 
 Check each result independently. One exchange failure must not hide successful results from other exchanges.
 
 ## Capability Discovery
 
-Get one nullable shared client when routing dynamically:
+Get one preferred capability when the exchange is known dynamically:
 
 ```csharp
-var tickerClient = rest.GetSpotTickerClient(Exchange.Binance);
-if (tickerClient != null)
+var match = shared.GetCapability(
+    Exchange.Binance,
+    SharedCapabilities.Tickers.GetTicker.Rest,
+    TradingMode.Spot);
+
+if (match is not null)
 {
-    var result = await tickerClient.GetSpotTickerAsync(
+    var result = await match.Capability.GetTickerAsync(
         new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 }
 ```
 
-Use plural getters such as `GetSpotTickerClients()`, `GetOrderBookClients(mode)`, or `GetFuturesOrderClients(mode)` to enumerate supported clients. Use `GetExchangeSharedClients(exchange, tradingMode)` to inspect all shared interfaces exposed by one exchange.
+Use typed exchange properties such as `shared.Binance`, `shared.Kraken`, and `shared.OKX` when the exchange is known at compile time. `GetClient(exchange)` returns the exchange aggregate as `ISharedApiClientBase` for dynamic inspection.
 
 ## Asset Types And Symbol Catalogs
 
 Use `SharedAssetType` and `SharedAssetSubType` to classify or filter the base and quote assets returned by shared symbol APIs. Pass the filters through `GetSymbolsRequest`; do not infer asset classes from exchange-specific symbol names.
 
-Access `SpotSymbolCatalog` through an `ISpotSymbolRestClient` and `FuturesSymbolCatalog` through an `IFuturesSymbolRestClient`. Fetch the corresponding symbols successfully before reading a catalog because each property is `null` until its client cache has been populated.
+Access `SpotSymbolCatalog` through `IGetSpotSymbolsRest` and `FuturesSymbolCatalog` through `IGetFuturesSymbolsRest`. Fetch the corresponding symbols successfully before reading a catalog because each property is `null` until its client cache has been populated.
 
 Read `references/api-surfaces.md` for enum values, model properties, valid type/subtype combinations, and catalog structure. Read `references/usage.md` for filtering and catalog lookup examples.
 
-## Full Exchange API Access
+## Full Exchange API Access Through REST And Socket Clients
 
-The aggregate clients expose the bundled native clients directly:
+`IExchangeRestClient` and `IExchangeSocketClient` expose the bundled native clients directly. This is separate from the Shared API V2 aggregation provided by `IExchangeSharedApiClient`:
 
 ```csharp
 var binance = await rest.Binance.SpotApi.ExchangeData.GetTickerAsync("ETHUSDT");
@@ -107,25 +121,31 @@ var bitfinex = await rest.Bitfinex.ExchangeApi.ExchangeData.GetTickerAsync("tETH
 
 Use native access when the shared request lacks an option, the shared model omits required fields, or the endpoint has no shared interface. Follow the corresponding exchange skill for roots, credentials, symbols, and safety.
 
-Current source exposes direct REST clients for all bundled libraries, including CoinGecko and Polymarket, and direct socket clients for socket-capable libraries. CoinGecko and Polymarket are not currently part of the aggregate `_sharedClients` list, so use their direct properties.
+`IExchangeRestClient` exposes direct REST clients for all bundled libraries, including CoinGecko and Polymarket. `IExchangeSocketClient` exposes direct clients for socket-capable libraries, including Polymarket. CoinGecko and Polymarket are not currently exposed by `IExchangeSharedApiClient`, so access them through these native REST or socket properties.
 
 Configure `GlobalExchangeOptions.EnabledExchanges` when only a subset should be available; native clients and factories are created lazily on first access.
 
-## Websocket Fan-Out
+## Websocket Capability Fan-Out
 
 ```csharp
-var subscriptions = await socket.SubscribeToTickerUpdatesAsync(
-    new SubscribeTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USDT")),
-    update => Console.WriteLine($"{update.Exchange}: {update.Data.LastPrice}"),
+var matches = shared.GetCapabilities(
+    SharedCapabilities.Tickers.SubscribeTicker,
+    TradingMode.Spot,
     new[] { Exchange.Binance, Exchange.Bybit, Exchange.OKX });
 
-foreach (var subscription in subscriptions.Where(x => !x.Success))
-    Console.WriteLine($"{subscription.Exchange}: {subscription.Error}");
+var subscriptions = await Task.WhenAll(matches.Select(async match =>
+    (Match: match,
+     Result: await match.Capability.SubscribeToTickerUpdatesAsync(
+         new SubscribeTickerRequest(
+             new SharedSymbol(TradingMode.Spot, "BTC", "USDT")),
+         update => Console.WriteLine(
+             $"{match.Exchange}: {update.Data.LastPrice}")))));
 
-await socket.UnsubscribeAllAsync();
+foreach (var subscription in subscriptions.Where(x => x.Result.Success))
+    await subscription.Result.Data.CloseAsync();
 ```
 
-Keep handlers fast. Close individual successful subscriptions with `subscription.Data.CloseAsync()` or tear down all aggregate connections with `UnsubscribeAllAsync()`.
+Keep handlers fast and close every successful subscription during shutdown.
 
 ## Credentials
 
@@ -143,7 +163,7 @@ services.AddCryptoClients(options =>
 });
 ```
 
-`AddCryptoClients` registers native exchange clients plus `IExchangeRestClient`, `IExchangeSocketClient`, `IExchangeOrderBookFactory`, `IExchangeTrackerFactory`, and `IExchangeUserClientProvider`. It also accepts per-exchange option delegates and an `IConfiguration` overload.
+`AddCryptoClients` registers `IExchangeSharedApiClient`, exchange-specific Shared API aggregates, strict capabilities, native exchange clients, `IExchangeRestClient`, `IExchangeSocketClient`, factories, and providers. Prefer injecting `IExchangeSharedApiClient` for new portable workflows.
 
 ## Order Books And Trackers
 

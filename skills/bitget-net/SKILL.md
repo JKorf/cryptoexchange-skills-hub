@@ -1,6 +1,6 @@
 ---
 name: bitget-net
-description: Build C#/.NET Bitget integrations with Bitget.Net, including SpotApiV2, FuturesApiV2, CopyTradingFuturesV2, UnifiedApi, REST clients, websocket subscriptions, spot and futures account reads, order placement/cancellation, BitgetCredentials with passphrase, Bitget compact symbols, product types, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, and SharedApis access. Use when the user asks for Bitget market data, Bitget account or trading code, Bitget futures, Bitget spot margin, Bitget copy trading, Bitget websocket updates, Bitget error handling, or converting raw Bitget API usage to idiomatic Bitget.Net.
+description: Build C#/.NET Bitget integrations with Bitget.Net, including SpotApiV2, FuturesApiV2, CopyTradingFuturesV2, UnifiedApi, REST clients, websocket subscriptions, spot and futures account reads, order placement/cancellation, BitgetCredentials with passphrase, Bitget compact symbols, product types, enums, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Bitget market data, Bitget account or trading code, Bitget futures, Bitget spot margin, Bitget copy trading, Bitget websocket updates, Bitget error handling, or converting raw Bitget API usage to idiomatic Bitget.Net.
 ---
 
 # Bitget.Net
@@ -185,19 +185,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new BitgetRestClient().SpotApiV2.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+using var client = new BitgetRestClient();
+IGetTickerRest ticker = client.SpotApiV2.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-Bitget exposes shared clients on both `SpotApiV2` and `FuturesApiV2`. Do not mix Bitget-native request/model types with `SharedApis` request/model types.
+Use `IBitgetSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `FuturesRest`, `SpotSocket`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Bitget-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

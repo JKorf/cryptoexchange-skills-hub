@@ -47,7 +47,7 @@ Use this file before generating credentials, trading, collateral exposure, lever
 - Socket request methods return `QueryResult<T>`; subscriptions return `WebSocketResult<UpdateSubscription>`.
 - Current source exposes live and custom environments, not a built-in testnet.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis for portable spot/futures workflows.
 - Use native APIs for convert, codes, subaccounts, kill switch, hedge mode, OCO/OTO, and detailed WhiteBit models.

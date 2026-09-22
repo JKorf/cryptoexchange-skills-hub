@@ -1,6 +1,6 @@
 ---
 name: upbit-net
-description: Build C#/.NET Upbit public market-data integrations with Upbit.Net, including JKorf.Upbit.Net package setup, SpotApi ExchangeData, REST clients, websocket subscriptions, symbols, tickers, trades, klines, order books, symbol configuration, regional South Korea/Singapore/Indonesia/Thailand environments, Upbit QUOTE-BASE symbols, dependency injection, local order books, trackers, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for Upbit public quotation data, Upbit regional markets, Upbit websocket updates, Upbit order books, Upbit error handling, or converting raw public Upbit market-data usage to idiomatic Upbit.Net. Current Upbit.Net does not expose credentials, account, trading, wallet, or private websocket APIs.
+description: Build C#/.NET Upbit public market-data integrations with Upbit.Net, including JKorf.Upbit.Net package setup, SpotApi ExchangeData, REST clients, websocket subscriptions, symbols, tickers, trades, klines, order books, symbol configuration, regional South Korea/Singapore/Indonesia/Thailand environments, Upbit QUOTE-BASE symbols, dependency injection, local order books, trackers, HttpResult REST handling, WebSocketResult subscription handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Upbit public quotation data, Upbit regional markets, Upbit websocket updates, Upbit order books, Upbit error handling, or converting raw public Upbit market-data usage to idiomatic Upbit.Net. Current Upbit.Net does not expose credentials, account, trading, wallet, or private websocket APIs.
 ---
 
 # Upbit.Net
@@ -42,9 +42,9 @@ var socket = new UpbitSocketClient();
 Available surfaces:
 
 - `rest.SpotApi.ExchangeData`: symbols, trades, tickers, order books, klines, symbol configuration
-- `rest.SpotApi.SharedClient`: shared public REST market-data interfaces
+- `rest.SpotApi.SharedApi`: shared public REST market-data interfaces
 - `socket.SpotApi`: ticker, trade, order book, and kline subscriptions
-- `socket.SpotApi.SharedClient`: shared public socket interfaces
+- `socket.SpotApi.SharedApi`: shared public socket interfaces
 
 There is no `SpotApi.Account`, `SpotApi.Trading`, futures API, or authenticated websocket surface.
 
@@ -122,17 +122,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Keep handlers fast and unsubscribe on shutdown.
 
-## SharedApis
+## Shared API V2
+
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers = new UpbitRestClient().SpotApi.SharedClient;
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
+using var client = new UpbitRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
 ```
 
-Upbit.Net SharedApis covers public market data only. Do not generate shared account or trading calls for Upbit.
+Use `IUpbitSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`, `SpotSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Upbit-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

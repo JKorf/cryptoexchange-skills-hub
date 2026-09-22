@@ -59,35 +59,33 @@ Order-book subscription levels are explicit. Common supported shared levels are 
 
 Environment names are `live`, `live-singapore`, `live-indonesia`, and `live-thailand`.
 
-## SharedApis Interfaces
+## Shared API V2
 
-REST shared client:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
 
-- `client.SpotApi.SharedClient`
+- `restClient.SpotApi.SharedApi`
+- `socketClient.SpotApi.SharedApi`
 
-Implemented REST interfaces:
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `ITradeHistoryRestClient`
-- `IBookTickerRestClient`
+The exchange aggregate is `IUpbitSharedApiClient`. It exposes:
 
-Socket shared client:
+- `SpotRest` as `IUpbitRestClientSpotSharedApi`
+- `SpotSocket` as `IUpbitSocketClientSpotSharedApi`
 
-- `socket.SpotApi.SharedClient`
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
-Implemented socket interfaces:
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
 
-- `ITickerSocketClient`
-- `ITradeSocketClient`
-- `IBookTickerSocketClient`
-- `IKlineSocketClient`
-- `IOrderBookSocketClient`
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
 
-Call `SharedClient.Discover()` before relying on optional capabilities.
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
+
+The library's DI registration registers `IUpbitSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Symbols
 

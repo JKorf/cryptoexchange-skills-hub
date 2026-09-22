@@ -51,7 +51,7 @@ Use this file before generating HTX credential, account, transfer, withdrawal, A
 - Setting leverage persists until changed; do not hide this effect.
 - Use `Offset.Open` for opening examples and `Offset.Close`, `reduceOnly: true`, or the close-position endpoints for closing examples.
 - Prefer `CloseCrossMarginPositionAsync` or `CloseIsolatedMarginPositionAsync` for close-position examples when that matches the user request.
-- V5 futures is a native `UsdtFuturesV5Api` surface; use `UsdtFuturesApi.SharedClient` for cross-exchange futures code.
+- V5 futures is a native `UsdtFuturesV5Api` surface; use `UsdtFuturesApi.SharedApi` for cross-exchange futures code.
 
 ## Withdrawals And Transfers
 
@@ -68,7 +68,7 @@ Use this file before generating HTX credential, account, transfer, withdrawal, A
 - Spot socket query/order methods return `QueryResult<T>` and can place/cancel live orders. Treat them like trading endpoints.
 - For long-running user data services, consider `IHTXTrackerFactory` instead of ad hoc subscription management.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis when the user needs exchange-agnostic code.
 - Use native HTX APIs for HTX-specific details such as spot account ids, margin loans, V5 futures, detailed trigger/TP-SL orders, and HTX-specific websocket streams.

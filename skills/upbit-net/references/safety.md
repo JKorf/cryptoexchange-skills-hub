@@ -40,7 +40,7 @@ Use this file before generating Upbit regional, symbol, websocket, local order-b
 - Use `IUpbitTrackerFactory` for shared public kline or trade tracking workflows.
 - Keep long-lived order books and trackers managed by application services instead of creating one per request.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis for exchange-agnostic public market data.
 - Use native Upbit APIs for regional selection, detailed symbol metadata, native order-book aggregation, and Upbit-specific models.

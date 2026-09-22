@@ -70,7 +70,7 @@ Use this file before generating HyperLiquid credential, account, transfer, withd
 - Socket query and order methods return `QueryResult<T>` and can place/cancel live orders. Treat them like trading endpoints.
 - For long-running user data services, consider `IHyperLiquidTrackerFactory` instead of ad hoc subscription management.
 
-## SharedApis
+## Shared API V2
 
 - Use SharedApis when the user needs exchange-agnostic code.
 - Use native HyperLiquid APIs for builder fees, vaults, staking, HIP-3 DEX, detailed TWAP/trigger behavior, and other HyperLiquid-specific features.

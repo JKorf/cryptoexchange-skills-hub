@@ -1,6 +1,6 @@
 ---
 name: bybit-net
-description: Build C#/.NET Bybit integrations with Bybit.Net, including V5Api REST clients, V5 spot/linear/inverse/options/spread/private websocket clients, spot and derivatives market data, unified account balances, order placement/cancellation, positions, leverage, margin and position mode, BybitCredentials, Bybit V5 Category arguments, Bybit compact symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, CallResult batch-item handling, ExchangeCallResult shared helper handling, and SharedApis access. Use when the user asks for Bybit V5 market data, Bybit account or trading code, Bybit websocket updates, Bybit error handling, or converting raw Bybit API usage to idiomatic Bybit.Net.
+description: Build C#/.NET Bybit integrations with Bybit.Net, including V5Api REST clients, V5 spot/linear/inverse/options/spread/private websocket clients, spot and derivatives market data, unified account balances, order placement/cancellation, positions, leverage, margin and position mode, BybitCredentials, Bybit V5 Category arguments, Bybit compact symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, CallResult batch-item handling, ExchangeCallResult shared helper handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for Bybit V5 market data, Bybit account or trading code, Bybit websocket updates, Bybit error handling, or converting raw Bybit API usage to idiomatic Bybit.Net.
 ---
 
 # Bybit.Net
@@ -54,7 +54,7 @@ Current source-checked API surfaces:
 - `rest.V5Api.SubAccount`: subaccount and subaccount API key management
 - `rest.V5Api.CryptoLoan`: collateral, borrow, repay, open loan, completed loan, and collateral adjustment endpoints
 - `rest.V5Api.Earn`: earn product, order, and staked-position endpoints
-- `rest.V5Api.SharedClient`: exchange-agnostic SharedApis REST interfaces for spot and derivatives workflows
+- `rest.V5Api.SharedApi`: exchange-agnostic SharedApis REST interfaces for spot and derivatives workflows
 - `socket.V5SpotApi`: spot public websocket streams
 - `socket.V5LinearApi`: linear public websocket streams
 - `socket.V5InverseApi`: inverse public websocket streams
@@ -187,19 +187,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-var shared = new BybitRestClient().V5Api.SharedClient;
-var info = shared.Discover();
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
+using var client = new BybitRestClient();
+IGetTickerRest ticker = client.V5Api.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.PerpetualLinear, "ETH", "USDT")));
 ```
 
-Bybit exposes shared REST on `V5Api.SharedClient`, public shared sockets on `V5SpotApi.SharedClient`, `V5LinearApi.SharedClient`, and `V5InverseApi.SharedClient`, and private shared sockets on `V5PrivateApi.SharedClient`. Call `Discover()` before routing optional shared features. Do not mix Bybit-native request/model types with `SharedApis` request/model types.
+Use `IBybitSharedApiClient` as the exchange aggregate. Its aggregate properties—`Rest`, `SpotSocket`, `LinearSocket`, `InverseSocket`, `PrivateSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix Bybit-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

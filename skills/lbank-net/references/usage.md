@@ -180,18 +180,18 @@ await socket.UnsubscribeAsync(orders.Data);
 
 Passing `null` lets the authenticated client acquire and maintain a listen key.
 
-## SharedApis Ticker
+## Shared API V2
+
+Use a narrow capability interface when the operation is known at compile time:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers =
-    new LBankRestClient().SpotApi.SharedClient;
+using var client = new LBankRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+var symbol = new SharedSymbol(TradingMode.Spot, "ETH", "USDT");
 
-var result = await tickers.GetSpotTickerAsync(
-    new GetTickerRequest(
-        new SharedSymbol(TradingMode.Spot, "ETH", "USDT")));
-
+var result = await ticker.GetTickerAsync(new GetTickerRequest(symbol));
 if (!result.Success)
 {
     Console.WriteLine(result.Error);
@@ -200,6 +200,20 @@ if (!result.Success)
 
 Console.WriteLine(result.Data.LastPrice);
 ```
+
+Inject `ILBankSharedApiClient` when a service needs multiple LBank Shared API surfaces. It exposes `SpotRest`, `SpotSocket`. When the operation or transport is selected dynamically, use a typed capability descriptor:
+
+```csharp
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is null)
+    return;
+
+Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Prefer an aggregate property or direct capability injection when the required surface is known at compile time.
 
 ## Dependency Injection and Local Book
 

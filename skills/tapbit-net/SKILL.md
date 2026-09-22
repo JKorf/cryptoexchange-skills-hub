@@ -1,6 +1,6 @@
 ---
 name: tapbit-net
-description: Build C#/.NET Tapbit spot integrations with Tapbit.Net, including SpotApi REST market data, asset metadata, balances, limit and batch orders, TapbitCredentials, slash-separated symbols, HttpResult handling, SharedApis, dependency injection, multi-user REST clients, and REST-polled spot user-data tracking. Use when the user asks for Tapbit spot market data, Tapbit balances or order code, Tapbit error handling, or converting raw Tapbit REST calls to idiomatic Tapbit.Net. Do not use for Tapbit futures or websocket workflows because version 1.0.0 does not expose those clients.
+description: Build C#/.NET Tapbit spot integrations with Tapbit.Net, including SpotApi REST market data, asset metadata, balances, limit and batch orders, TapbitCredentials, slash-separated symbols, HttpResult handling, Shared API V2 strict capabilities and aggregates, dependency injection, multi-user REST clients, and REST-polled spot user-data tracking. Use when the user asks for Tapbit spot market data, Tapbit balances or order code, Tapbit error handling, or converting raw Tapbit REST calls to idiomatic Tapbit.Net. Do not use for Tapbit futures or websocket workflows because version 1.0.0 does not expose those clients.
 ---
 
 # Tapbit.Net
@@ -44,7 +44,7 @@ The complete native exchange surface is:
 - `client.SpotApi.ExchangeData`: server time, symbols, order books, tickers, klines, recent trades, assets and networks
 - `client.SpotApi.Account`: all balances or one balance by asset
 - `client.SpotApi.Trading`: limit-order placement, batch placement, cancellation, batch cancellation, open/closed orders, and order lookup
-- `client.SpotApi.SharedClient`: shared spot REST interfaces
+- `client.SpotApi.SharedApi`: shared spot REST interfaces
 
 There is no native socket or futures client. Read `references/api-surfaces.md` before selecting less common methods or tracker features.
 
@@ -112,24 +112,24 @@ Console.WriteLine(order.Data.OrderId);
 
 The library has no test-order method. Valid authenticated placement calls can create live orders.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-ISpotTickerRestClient tickers =
-    new TapbitRestClient().SpotApi.SharedClient;
+using var client = new TapbitRestClient();
+IGetTickerRest ticker = client.SpotApi.SharedApi;
 
-var result = await tickers.GetSpotTickerAsync(
+var result = await ticker.GetTickerAsync(
     new GetTickerRequest(
         new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
 ```
 
-The shared client implements asset, balance, kline, order-book, recent-trade, spot-symbol, spot-ticker, and spot-order REST interfaces. It supports limit orders only. Shared order-trade and user-trade methods are explicitly unsupported.
+Use `ITapbitSharedApiClient` as the exchange aggregate. Its aggregate properties—`SpotRest`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
 
-Do not mix native Tapbit models or enums with SharedApis request and response types. Call `SharedClient.Discover()` before depending on optional capabilities.
+Tapbit currently exposes no Shared API V2 socket surface. Do not mix Tapbit-native request/model types with Shared API request/model types.
 
 ## Dependency Injection And Multi-User Clients
 

@@ -251,7 +251,7 @@ Futures symbols are contract names such as `ETHUSDTM` or `XBTUSDTM`.
 - `GetPositionHistoryAsync(...)`
 - `GetPositionTiersAsync(...)`
 
-Unified APIs are native KuCoin account APIs. They do not expose `SharedClient`.
+Unified APIs are native KuCoin account APIs. They do not expose `SharedApi`.
 
 ## Socket Subscriptions
 
@@ -311,77 +311,49 @@ Unified APIs are native KuCoin account APIs. They do not expose `SharedClient`.
 - `SubscribeToLeverageUpdatesAsync(tradeType, handler)`
 - `SubscribeToLiquidationWarningUpdatesAsync(tradeType, handler)`
 
-## SharedApis Interfaces
+## Shared API V2
 
-REST shared clients:
+V2 exposes narrow capability interfaces from four Kucoin surfaces:
 
-- `client.SpotApi.SharedClient`
-- `client.FuturesApi.SharedClient`
+- `client.SpotApi.SharedApi`
+- `client.FuturesApi.SharedApi`
+- `socket.SpotApi.SharedApi`
+- `socket.FuturesApi.SharedApi`
 
-Implemented spot REST shared interfaces:
+Each interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, `IGetPositionsRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
 
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotOrderRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `IFeeRestClient`
-- `ISpotOrderClientIdRestClient`
-- `ISpotTriggerOrderRestClient`
-- `IBookTickerRestClient`
-- `ITransferRestClient`
+The exchange aggregate is `IKucoinSharedApiClient`. It exposes:
 
-Implemented futures REST shared interfaces:
+- `SpotRest` as `IKucoinRestClientSpotSharedApi`
+- `FuturesRest` as `IKucoinRestClientFuturesSharedApi`
+- `SpotSocket` as `IKucoinSocketClientSpotSharedApi`
+- `FuturesSocket` as `IKucoinSocketClientFuturesSharedApi`
 
-- `IBalanceRestClient`
-- `IFuturesTickerRestClient`
-- `IFuturesSymbolRestClient`
-- `IFuturesOrderRestClient`
-- `IKlineRestClient`
-- `IRecentTradeRestClient`
-- `IOrderBookRestClient`
-- `IOpenInterestRestClient`
-- `IFundingRateRestClient`
-- `IPositionHistoryRestClient`
-- `IFeeRestClient`
-- `IFuturesOrderClientIdRestClient`
-- `IFuturesTpSlRestClient`
-- `IBookTickerRestClient`
-- `ILeverageRestClient`
+The REST surfaces cover Kucoin's portable market-data, order, account, funding, and futures-position operations. The socket surfaces cover ticker, trade, book ticker, kline, order-book, balance, order, and futures-position subscriptions where applicable. Let the typed surface or capability options determine exact support rather than maintaining a copied interface list.
 
-Socket shared clients:
+Use direct capability access when the operation is known:
 
-- `socket.SpotApi.SharedClient`
-- `socket.FuturesApi.SharedClient`
+```csharp
+IGetTickerRest ticker = client.SpotApi.SharedApi;
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.Spot, "BTC", "USDT")));
+```
 
-Implemented spot socket shared interfaces:
+Use the aggregate for compile-time discovery across Kucoin surfaces. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
-- `ITickerSocketClient`
-- `ITradeSocketClient`
-- `IBookTickerSocketClient`
-- `IKlineSocketClient`
-- `IOrderBookSocketClient`
-- `IBalanceSocketClient`
-- `ISpotOrderSocketClient`
+```csharp
+var match = sharedClient.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest,
+    TradingMode.Spot);
 
-Implemented futures socket shared interfaces:
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
+```
 
-- `ITickerSocketClient`
-- `ITradeSocketClient`
-- `IBookTickerSocketClient`
-- `IKlineSocketClient`
-- `IOrderBookSocketClient`
-- `IBalanceSocketClient`
-- `IFuturesOrderSocketClient`
-- `IPositionSocketClient`
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed capability descriptor, not an implementation or a guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matches and `Discover` for summary metadata.
 
-Call `SharedClient.Discover()` before relying on optional shared features.
+`services.AddKucoin(...)` registers `IKucoinSharedApiClient` and the supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
 
 ## Symbols
 
@@ -391,12 +363,15 @@ Call `SharedClient.Discover()` before relying on optional shared features.
 - `KucoinExchange.FormatSymbol("BTC", "USDT", TradingMode.PerpetualLinear)` returns `XBTUSDTM`.
 - `KucoinExchange.FormatSymbol("ETH", "USDT", TradingMode.PerpetualLinear)` returns `ETHUSDTM`.
 - Unified methods use KuCoin symbol strings plus explicit account/trade type parameters where required.
-- SharedApis uses `SharedSymbol`, for example `new SharedSymbol(TradingMode.Spot, "BTC", "USDT")`.
+- Shared API V2 uses `SharedSymbol`, for example `new SharedSymbol(TradingMode.Spot, "BTC", "USDT")`.
 
 ## Result Types
 
 - REST: `HttpResult<T>` or `HttpResult`
 - Websocket subscriptions: `WebSocketResult<UpdateSubscription>`
+- Shared REST capabilities: `HttpResult<T>` or `HttpResult`
+- Shared subscription capabilities: `WebSocketResult<UpdateSubscription>`
+- Transport-independent shared capabilities: `IExchangeCallResult<T>`
 - Shared non-I/O helpers: `ExchangeCallResult<T>`
 
 Always check `Success` before using `Data`. Bulk order methods can return nested per-item `CallResult<T>` values.

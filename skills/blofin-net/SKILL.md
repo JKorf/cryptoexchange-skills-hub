@@ -1,6 +1,6 @@
 ---
 name: blofin-net
-description: Build C#/.NET BloFin integrations with BloFin.Net, including AccountApi, FuturesApi REST clients, futures websocket subscriptions, futures market data, account balances, futures balances, order placement/cancellation, positions, leverage, margin mode, position mode, BloFinCredentials with passphrase, BloFin futures symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, CallResult batch-item handling, and SharedApis access. Use when the user asks for BloFin futures market data, BloFin account or trading code, BloFin websocket updates, BloFin error handling, or converting raw BloFin API usage to idiomatic BloFin.Net.
+description: Build C#/.NET BloFin integrations with BloFin.Net, including AccountApi, FuturesApi REST clients, futures websocket subscriptions, futures market data, account balances, futures balances, order placement/cancellation, positions, leverage, margin mode, position mode, BloFinCredentials with passphrase, BloFin futures symbols, dependency injection, HttpResult REST handling, WebSocketResult subscription handling, CallResult batch-item handling, and Shared API V2 strict capabilities and aggregates. Use when the user asks for BloFin futures market data, BloFin account or trading code, BloFin websocket updates, BloFin error handling, or converting raw BloFin API usage to idiomatic BloFin.Net.
 ---
 
 # BloFin.Net
@@ -52,9 +52,9 @@ Current source-checked API surfaces:
 - `rest.FuturesApi.ExchangeData`: futures symbols, tickers, order books, trades, index/mark prices, funding rates, klines, and position tiers
 - `rest.FuturesApi.Account`: futures balances, margin mode, position mode, leverage reads and updates
 - `rest.FuturesApi.Trading`: futures positions, orders, batch orders, TP/SL orders, trigger orders, cancellations, close position, user trades, price limits, and position history
-- `rest.FuturesApi.SharedClient`: exchange-agnostic SharedApis REST interfaces for futures workflows
+- `rest.FuturesApi.SharedApi`: exchange-agnostic SharedApis REST interfaces for futures workflows
 - `socket.FuturesApi`: futures public subscriptions plus private position, order, trigger-order, and balance subscriptions
-- `socket.FuturesApi.SharedClient`: exchange-agnostic SharedApis socket interfaces for futures workflows
+- `socket.FuturesApi.SharedApi`: exchange-agnostic SharedApis socket interfaces for futures workflows
 
 Do not use exchange roots from other libraries such as `ExchangeApi`, `SpotApi`, `UsdFuturesApi`, `FuturesApiV2`, `SpotApiV3`, `CoinFuturesApi`, or `PerpetualFuturesApi`.
 
@@ -169,19 +169,24 @@ await socket.UnsubscribeAsync(sub.Data);
 
 Use `UnsubscribeAsync` or `UnsubscribeAllAsync` on shutdown. Do not leave example subscriptions running.
 
-## SharedApis
+## Shared API V2
 
-Use SharedApis only when portability matters:
+Use Shared APIs only when portability matters. Depend on the narrow capability needed by the workflow:
 
 ```csharp
 using CryptoExchange.Net.SharedApis;
 
-var shared = new BloFinRestClient().FuturesApi.SharedClient;
-var info = shared.Discover();
-Console.WriteLine($"{info.Exchange} {info.TypeName}");
+using var client = new BloFinRestClient();
+IGetTickerRest ticker = client.FuturesApi.SharedApi;
+
+var result = await ticker.GetTickerAsync(
+    new GetTickerRequest(
+        new SharedSymbol(TradingMode.PerpetualLinear, "ETH", "USDT")));
 ```
 
-BloFin exposes account shared clients on `AccountApi.SharedClient` and futures shared clients on `FuturesApi.SharedClient`. Call `Discover()` before routing optional shared features. Do not mix BloFin-native request/model types with `SharedApis` request/model types.
+Use `IBloFinSharedApiClient` as the exchange aggregate. Its aggregate properties—`AccountRest`, `FuturesRest`, `FuturesSocket`—expose the supported Shared API surfaces at compile time. Use `GetCapability` only when the capability, trading mode, or transport is selected dynamically.
+
+For WebSocket workflows, use the narrow subscription interface exposed by the applicable socket surface, such as `ISubscribeTickerSocket` or `ISubscribeTradesSocket`. Do not mix BloFin-native request/model types with Shared API request/model types.
 
 ## Dependency Injection
 

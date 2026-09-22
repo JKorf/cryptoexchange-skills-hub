@@ -84,59 +84,34 @@ Sockets commonly use:
 
 Confirm exact overloads from the local library source or `../Bitget.Net/Examples/ai-friendly/` before generating non-trivial code.
 
-## SharedApis Surfaces
+## Shared API V2
 
-Use `.SharedClient` when writing exchange-agnostic code:
+Strict capabilities are exposed through `SharedApi` on the supported native client roots:
+
+- `restClient.SpotApiV2.SharedApi`
+- `socketClient.SpotApiV2.SharedApi`
+- `restClient.FuturesApiV2.SharedApi`
+- `socketClient.FuturesApiV2.SharedApi`
+
+Each V2 interface represents one operation, such as `IGetTickerRest`, `IPlaceSpotOrderRest`, or `ISubscribeTickerSocket`. Depend on the narrowest capability required by the workflow instead of a legacy topic client.
+
+The exchange aggregate is `IBitgetSharedApiClient`. It exposes:
+
+- `SpotRest` as `IBitgetRestClientSpotSharedApi`
+- `FuturesRest` as `IBitgetRestClientFuturesSharedApi`
+- `SpotSocket` as `IBitgetSocketClientSpotSharedApi`
+- `FuturesSocket` as `IBitgetSocketClientFuturesSharedApi`
+
+Use an aggregate property for compile-time discovery. Use runtime lookup only when the capability, trading mode, or transport is selected dynamically:
 
 ```csharp
-var sharedSpot = new BitgetRestClient().SpotApiV2.SharedClient;
-var sharedFutures = new BitgetRestClient().FuturesApiV2.SharedClient;
-var sharedSpotSocket = new BitgetSocketClient().SpotApiV2.SharedClient;
-var sharedFuturesSocket = new BitgetSocketClient().FuturesApiV2.SharedClient;
+var match = SharedApi.GetCapability(
+    SharedCapabilities.Tickers.GetTicker.Rest);
+
+if (match is not null)
+    Console.WriteLine($"{match.Exchange} / {match.Transport}");
 ```
 
-Implemented spot REST shared interfaces include:
+`SharedCapabilities.Tickers.GetTicker.Rest` is a typed descriptor, not an implementation or guarantee of support. A match contains the capability implementation and its options. Use `GetCapabilities` for all matching surfaces and `Discover` for summary metadata.
 
-- `IAssetsRestClient`
-- `IBalanceRestClient`
-- `IDepositRestClient`
-- `IKlineRestClient`
-- `IOrderBookRestClient`
-- `IRecentTradeRestClient`
-- `ISpotOrderRestClient`
-- `ISpotSymbolRestClient`
-- `ISpotTickerRestClient`
-- `ITradeHistoryRestClient`
-- `IWithdrawalRestClient`
-- `IWithdrawRestClient`
-- `IFeeRestClient`
-- `ISpotOrderClientIdRestClient`
-- `ISpotTriggerOrderRestClient`
-- `IBookTickerRestClient`
-- `ITransferRestClient`
-
-Implemented futures REST shared interfaces include:
-
-- `IBalanceRestClient`
-- `IFuturesTickerRestClient`
-- `IFuturesSymbolRestClient`
-- `IKlineRestClient`
-- `IRecentTradeRestClient`
-- `ILeverageRestClient`
-- `IMarkPriceKlineRestClient`
-- `IIndexPriceKlineRestClient`
-- `IOrderBookRestClient`
-- `IOpenInterestRestClient`
-- `IFundingRateRestClient`
-- `IFuturesOrderRestClient`
-- `IPositionModeRestClient`
-- `IPositionHistoryRestClient`
-- `IFeeRestClient`
-- `IFuturesOrderClientIdRestClient`
-- `IFuturesTriggerOrderRestClient`
-- `IFuturesTpSlRestClient`
-- `IBookTickerRestClient`
-
-Implemented spot socket shared interfaces include `ITickerSocketClient`, `ITradeSocketClient`, `IBookTickerSocketClient`, `IBalanceSocketClient`, `ISpotOrderSocketClient`, `IUserTradeSocketClient`, `IKlineSocketClient`, and `IOrderBookSocketClient`.
-
-Implemented futures socket shared interfaces include `ITickerSocketClient`, `ITradeSocketClient`, `IBookTickerSocketClient`, `IBalanceSocketClient`, `IKlineSocketClient`, `IOrderBookSocketClient`, `IPositionSocketClient`, `IFuturesOrderSocketClient`, and `IUserTradeSocketClient`.
+The library's DI registration registers `IBitgetSharedApiClient` and its supported strict capability interfaces. Inject a narrow capability when only one operation is needed. If several exchanges are registered, inject `IEnumerable<TCapability>` and select by exchange and supported trading mode.
