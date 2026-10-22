@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bitunix.Net"
+  short_description: "Build C# Bitunix spot and futures integrations."
+  default_prompt: "Use $bitunix-net to implement a Bitunix.Net REST, websocket, account, or trading workflow."
